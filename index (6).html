@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OMNI FLASH — Cinematic AI Studio</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+:root{--bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;--border:#2a2a3a;--accent:#7c5cfc;--accent2:#fc5c7d;--gold:#f5c842;--text:#e8e8f0;--muted:#7070a0;--success:#4ade80;--radius:10px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:15px;line-height:1.6;min-height:100vh;}
+header{border-bottom:1px solid var(--border);padding:15px 26px;display:flex;align-items:center;gap:13px;}
+.logo-mark{width:33px;height:33px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
+.logo-text{font-size:15px;font-weight:600;letter-spacing:.04em;}
+.logo-sub{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+.hdr-badge{margin-left:auto;background:rgba(124,92,252,.15);border:1px solid rgba(124,92,252,.3);color:var(--accent);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;letter-spacing:.06em;text-transform:uppercase;}
+.main-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 26px;}
+.main-tab{padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;letter-spacing:.02em;}
+.main-tab:hover{color:var(--text);}
+.main-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+main{display:flex;height:calc(100vh - 107px);}
+.panel-left{width:390px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:15px;}
+.panel-right{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:14px;}
+.slabel{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
+.field{display:flex;flex-direction:column;gap:5px;}
+label{font-size:13px;font-weight:500;color:#b0b0cc;}
+input[type="text"],textarea,select{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:14px;padding:8px 12px;width:100%;transition:border-color .2s;outline:none;}
+input[type="text"]:focus,textarea:focus,select:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:65px;}
+select option{background:#1a1a26;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.upload-zone{border:1.5px dashed var(--border);border-radius:var(--radius);padding:14px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);position:relative;overflow:hidden;}
+.upload-zone:hover{border-color:var(--accent);background:rgba(124,92,252,.04);}
+.upload-zone.has-img{border-color:var(--success);border-style:solid;}
+.upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-preview{width:100%;max-height:110px;object-fit:contain;border-radius:6px;margin-bottom:6px;display:none;}
+.upload-icon{font-size:20px;color:var(--muted);margin-bottom:3px;}
+.upload-lbl{font-size:12px;color:var(--muted);}
+.upload-lbl strong{color:var(--accent);}
+.upload-zone.has-img .upload-icon{display:none;}
+.analyze-btn{width:100%;background:rgba(124,92,252,.15);border:1px solid rgba(124,92,252,.3);border-radius:var(--radius);color:var(--accent);font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;padding:8px;cursor:pointer;transition:all .15s;display:none;margin-top:7px;}
+.analyze-btn:hover{background:rgba(124,92,252,.25);}
+.analyze-btn.vis{display:block;}
+.analyze-btn:disabled{opacity:.4;cursor:not-allowed;}
+.ai-result{background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.2);border-radius:var(--radius);padding:9px 11px;font-size:12px;display:none;margin-top:6px;}
+.ai-result.vis{display:block;}
+.ai-tag{color:var(--success);font-weight:700;font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;}
+.pill-group{display:flex;flex-wrap:wrap;gap:6px;}
+.pill{padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;color:var(--muted);background:var(--surface);user-select:none;}
+.pill:hover{border-color:var(--accent);color:var(--text);}
+.pill.active{background:rgba(124,92,252,.18);border-color:var(--accent);color:var(--accent);}
+.pill.dur{font-family:'Space Mono',monospace;}
+.pill.dur.active{background:rgba(245,200,66,.15);border-color:var(--gold);color:var(--gold);}
+.pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:7px 5px;cursor:pointer;transition:all .15s;text-align:center;}
+.pcard:hover{border-color:var(--accent);}
+.pcard.active{border-color:var(--accent2);background:rgba(252,92,125,.1);}
+.pcard .pn{font-size:12px;font-weight:600;}
+.pcard .pd{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;}
+.scene-info{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:13px;display:flex;align-items:center;gap:9px;}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0;}
+.scene-info span{color:var(--muted);}
+.scene-info strong{color:var(--gold);}
+.btn-gen{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--radius);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;padding:12px;cursor:pointer;transition:opacity .2s,transform .1s;letter-spacing:.04em;width:100%;}
+.btn-gen:hover{opacity:.9;transform:translateY(-1px);}
+.btn-gen:active{transform:translateY(0);}
+.btn-gen:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.divider{height:1px;background:var(--border);}
+.out-ph{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:10px;text-align:center;}
+.out-ph .ic{font-size:34px;opacity:.22;}
+.out-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px;}
+.out-title{font-size:16px;font-weight:600;}
+.abadge{font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(252,92,125,.15);border:1px solid rgba(252,92,125,.3);color:var(--accent2);font-weight:600;letter-spacing:.06em;text-transform:uppercase;}
+.jblock{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.jblock-hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2);}
+.jblock-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.btn-copy{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:12px;padding:3px 9px;cursor:pointer;transition:all .15s;}
+.btn-copy:hover{border-color:var(--accent);color:var(--accent);}
+.btn-copy.copied{border-color:var(--success);color:var(--success);}
+.jcontent{padding:13px;font-family:'Space Mono',monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-all;color:#c0c0e0;max-height:340px;overflow-y:auto;}
+.jk{color:#7c5cfc;}.js{color:#f5c842;}.jn{color:#4ade80;}
+.btn-dl{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;padding:8px 16px;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:7px;}
+.btn-dl:hover{border-color:var(--accent);background:rgba(124,92,252,.1);}
+.lbar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;display:none;}
+.lbar.on{display:block;}
+.lbar-in{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;animation:lp 2.5s ease-in-out infinite;}
+@keyframes lp{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
+.stxt{font-size:12px;color:var(--muted);font-family:'Space Mono',monospace;display:none;}
+.stxt.on{display:block;}
+.stab{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted);}
+.stab:hover{border-color:var(--accent);color:var(--text);}
+.stab.active{border-color:var(--accent);color:var(--accent);background:rgba(124,92,252,.1);}
+.icard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:2px;}
+.icard-hdr{background:var(--surface2);padding:9px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.ibadge{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:4px;}
+.ib-hero{background:rgba(124,92,252,.2);color:var(--accent);}
+.ib-life{background:rgba(252,92,125,.2);color:var(--accent2);}
+.ib-mj{background:rgba(245,200,66,.15);color:var(--gold);}
+.ib-flux{background:rgba(74,222,128,.15);color:var(--success);}
+.ib-neg{background:rgba(160,160,160,.15);color:var(--muted);}
+.ptxt{padding:13px;font-family:'Space Mono',monospace;font-size:12px;line-height:1.8;color:#c0c0e0;white-space:pre-wrap;word-break:break-word;}
+.tab-panel{display:none;}
+.tab-panel.active{display:flex;width:100%;}
+.tag-pill{font-size:12px;padding:2px 8px;border-radius:4px;display:inline-block;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo-mark">OF</div>
+  <div><div class="logo-text">OMNI FLASH</div><div class="logo-sub">Cinematic AI Studio v4.0</div></div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+    <input type="password" id="gemini-key" placeholder="Paste Gemini API Key — gratis di aistudio.google.com" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:'Space Mono',monospace;font-size:12px;padding:5px 11px;width:260px;outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+    <div class="hdr-badge" id="model-badge">Gemini 2.5 Flash</div>
+  </div>
+</header>
+<div class="main-tabs">
+  <div class="main-tab active" onclick="switchTab('video')">&#9654;&nbsp; Video Prompt</div>
+  <div class="main-tab" onclick="switchTab('image')">&#9670;&nbsp; Image Prompt</div>
+</div>
+<main>
+
+<!-- VIDEO TAB -->
+<div class="tab-panel active" id="tab-video">
+  <div class="panel-left">
+    <div>
+      <div class="slabel">Upload Produk</div>
+      <div class="upload-zone" id="vp-zone">
+        <input type="file" id="vp-file" accept="image/*" onchange="handleUpload(event,'vp')">
+        <div class="upload-icon">&#128247;</div>
+        <div class="upload-lbl" id="vp-lbl"><strong>Klik atau drag</strong> foto produk</div>
+        <img class="upload-preview" id="vp-prev">
+      </div>
+      <button class="analyze-btn" id="vp-analyze" onclick="analyzeProduct()">&#128269; Analisis Produk dengan AI</button>
+      <div class="ai-result" id="vp-airesult"><div class="ai-tag">AI Detected</div><div id="vp-aitext"></div></div>
+    </div>
+    <div class="field"><label>Nama produk</label><input type="text" id="vp-name" placeholder="Auto-fill setelah analisis, atau isi manual"></div>
+    <div class="field"><label>Deskripsi singkat</label><textarea id="vp-desc" placeholder="Auto-fill setelah analisis, atau isi manual"></textarea></div>
+    <div>
+      <div class="slabel">Upload Talent (opsional)</div>
+      <div class="upload-zone" id="vt-zone">
+        <input type="file" id="vt-file" accept="image/*" onchange="handleUpload(event,'vt')">
+        <div class="upload-icon">&#128100;</div>
+        <div class="upload-lbl" id="vt-lbl"><strong>Klik atau drag</strong> foto talent</div>
+        <img class="upload-preview" id="vt-prev">
+      </div>
+      <div class="field" style="margin-top:7px;"><label>Atau deskripsikan talent</label><input type="text" id="vt-text" placeholder="cth: Wanita 25th, kulit cerah, casual style"></div>
+    </div>
+    <div class="divider"></div>
+    <div>
+      <div class="slabel">Target & Bahasa</div>
+      <div class="grid-2">
+        <div class="field"><label>Negara</label>
+          <select id="v-country"><option>Indonesia</option><option>Malaysia</option><option>Singapore</option><option>Thailand</option><option>Philippines</option></select>
+        </div>
+        <div class="field"><label>Platform sosial</label>
+          <select id="v-platform"><option>TikTok</option><option>Instagram Reels</option><option>YouTube Shorts</option><option>Shopee Video</option></select>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="slabel">Gaya Konten</div>
+      <div class="pill-group" id="v-style">
+        <div class="pill active" data-val="UGC">UGC</div>
+        <div class="pill" data-val="Product Demo">Product Demo</div>
+        <div class="pill" data-val="Cinematic Lifestyle">Cinematic</div>
+        <div class="pill" data-val="Testimonial">Testimonial</div>
+        <div class="pill" data-val="Before After">Before/After</div>
+        <div class="pill" data-val="POV Creator">POV Creator</div>
+      </div>
+    </div>
+    <div>
+      <div class="slabel">Durasi Video</div>
+      <div class="pill-group" id="v-dur">
+        <div class="pill dur" data-val="10">10s</div>
+        <div class="pill dur active" data-val="15">15s</div>
+        <div class="pill dur" data-val="25">25s</div>
+        <div class="pill dur" data-val="30">30s</div>
+      </div>
+    </div>
+    <div>
+      <div class="slabel">Platform Video Generator</div>
+      <div class="pgrid" id="v-platforms">
+        <div class="pcard active" data-val="Runway" data-s="6"><div class="pn">Runway</div><div class="pd">6s</div></div>
+        <div class="pcard active" data-val="Pika" data-s="6"><div class="pn">Pika</div><div class="pd">6s</div></div>
+        <div class="pcard active" data-val="Hailuo" data-s="6"><div class="pn">Hailuo</div><div class="pd">6s</div></div>
+        <div class="pcard" data-val="Kling" data-s="8"><div class="pn">Kling</div><div class="pd">8s</div></div>
+        <div class="pcard" data-val="PixVerse" data-s="8"><div class="pn">PixVerse</div><div class="pd">8s</div></div>
+        <div class="pcard" data-val="Seedance" data-s="10"><div class="pn">Seedance</div><div class="pd">10s</div></div>
+        <div class="pcard" data-val="Veo" data-s="10"><div class="pn">Veo</div><div class="pd">10s</div></div>
+      </div>
+    </div>
+    <div class="scene-info"><div class="sdot"></div><div><span>Estimasi: </span><strong id="sc-count">3 scenes</strong><span> untuk </span><strong id="sc-dur">15s</strong><span> @ </span><strong id="sc-per">6s/scene</strong></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+  <button class="btn-gen" id="v-btn" onclick="generateVideo(1)" style="font-size:13px;">Generate 1 Angle</button>
+  <button class="btn-gen" id="v-btn3" onclick="generateVideo(3)" style="font-size:13px;background:linear-gradient(135deg,#f5c842,#fc5c7d);">3 Angles Sekaligus</button>
+</div>
+  </div>
+  <div class="panel-right" id="v-out"><div class="out-ph"><div class="ic">&#9654;</div><p>Upload foto produk, isi detail, lalu klik Generate.</p></div></div>
+</div>
+
+<!-- IMAGE TAB -->
+<div class="tab-panel" id="tab-image">
+  <div class="panel-left">
+    <div>
+      <div class="slabel">Upload Produk</div>
+      <div class="upload-zone" id="ip-zone">
+        <input type="file" id="ip-file" accept="image/*" onchange="handleUpload(event,'ip')">
+        <div class="upload-icon">&#128247;</div>
+        <div class="upload-lbl" id="ip-lbl"><strong>Klik atau drag</strong> foto produk</div>
+        <img class="upload-preview" id="ip-prev">
+      </div>
+    </div>
+    <div class="field"><label>Nama produk</label><input type="text" id="ip-name" placeholder="Nama produk"></div>
+    <div class="field"><label>Deskripsi / keunggulan</label><textarea id="ip-desc" placeholder="Fungsi, bahan unggulan, target pasar..."></textarea></div>
+    <div>
+      <div class="slabel">Upload Talent (opsional)</div>
+      <div class="upload-zone" id="it-zone">
+        <input type="file" id="it-file" accept="image/*" onchange="handleUpload(event,'it')">
+        <div class="upload-icon">&#128100;</div>
+        <div class="upload-lbl" id="it-lbl"><strong>Klik atau drag</strong> foto talent</div>
+        <img class="upload-preview" id="it-prev">
+      </div>
+      <div class="field" style="margin-top:7px;"><label>Atau deskripsikan talent</label><input type="text" id="it-text" placeholder="cth: Wanita 28th, glowing skin, modern style"></div>
+    </div>
+    <div class="divider"></div>
+    <div>
+      <div class="slabel">Gaya Visual</div>
+      <div class="pill-group" id="i-style">
+        <div class="pill active" data-val="Commercial Editorial">Editorial</div>
+        <div class="pill" data-val="Soft Aesthetic">Soft Aesthetic</div>
+        <div class="pill" data-val="Bold & Vibrant">Bold</div>
+        <div class="pill" data-val="Minimalist Clean">Minimalist</div>
+        <div class="pill" data-val="Luxury Premium">Luxury</div>
+        <div class="pill" data-val="Dark Moody">Dark Moody</div>
+      </div>
+    </div>
+    <div>
+      <div class="slabel">Aspect Ratio</div>
+      <div class="pill-group" id="i-ratio">
+        <div class="pill active" data-val="9:16">9:16 TikTok</div>
+        <div class="pill" data-val="1:1">1:1 Feed</div>
+        <div class="pill" data-val="4:5">4:5 IG</div>
+        <div class="pill" data-val="16:9">16:9 Wide</div>
+      </div>
+    </div>
+    <button class="btn-gen" id="i-btn" onclick="generateImage()">Generate Image Prompts</button>
+  </div>
+  <div class="panel-right" id="i-out"><div class="out-ph"><div class="ic">&#9670;</div><p>Upload produk dan isi detail untuk generate image prompt.</p></div></div>
+</div>
+</main>
+
+<script>
+const MODEL="gemini-2.5-flash";
+const b64store={vp:null,vt:null,ip:null,it:null};
+// JSON extraction helpers
+function extractJSON(raw){
+  if(!raw) return '';
+  let s=raw.trim();
+  // Strip markdown code fences
+  const fence=s.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if(fence) s=fence[1].trim();
+  // Find first { and last }
+  const start=s.indexOf('{');
+  const end=s.lastIndexOf('}');
+  if(start===-1) return s;
+  if(end===-1||end<start) return s.slice(start); // truncated — return from { onward
+  return s.slice(start, end+1);
+}
+
+function repairJSON(s){
+  if(!s) return '{}';
+  // Count open/close braces and brackets, add missing closers
+  let braces=0, brackets=0;
+  let inStr=false, escape=false;
+  for(let i=0;i<s.length;i++){
+    const c=s[i];
+    if(escape){escape=false;continue;}
+    if(c==='\\'){escape=true;continue;}
+    if(c==='"'&&!escape){inStr=!inStr;continue;}
+    if(inStr) continue;
+    if(c==='{') braces++;
+    else if(c==='}') braces--;
+    else if(c==='[') brackets++;
+    else if(c===']') brackets--;
+  }
+  // Close any unclosed strings first (heuristic: trim to last complete key-value)
+  let repaired=s.replace(/,\s*$/, ''); // strip trailing comma
+  for(let i=0;i<brackets;i++) repaired+=']';
+  for(let i=0;i<braces;i++) repaired+='}';
+  return repaired;
+}
+
+const STORE={};let _si=0;
+function stash(v){const k='k'+(++_si);STORE[k]=String(v||'');return k;}
+
+function getKey(){
+  const k=(document.getElementById('gemini-key')?.value||'').trim();
+  if(!k){alert('Masukkan Gemini API Key dulu!');throw new Error('API key kosong');}
+  return k;
+}
+function geminiAPI(key){
+  return`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
+}
+
+// Fetch with auto-retry (same model, max 3 attempts)
+async function geminiWithRetry(key, body, maxRetries=3){
+  let lastErr=null;
+  for(let r=0;r<maxRetries;r++){
+    try{
+      const res=await fetch(geminiAPI(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const data=await res.json();
+      if(data.error){
+        const status=data.error.status||'';
+        if(status==='UNAVAILABLE'||status==='RESOURCE_EXHAUSTED'||data.error.code===503||data.error.code===429){
+          lastErr=data.error.message;
+          const waitMs=(r+1)*3000;
+          const el=document.getElementById('stxt');
+          if(el) el.textContent=`Gemini sibuk, retry ${r+1}/${maxRetries}... tunggu ${waitMs/1000}s`;
+          await new Promise(ok=>setTimeout(ok,waitMs));
+          continue;
+        }
+        throw new Error('Gemini API Error: '+data.error.message+'\n\nStatus: '+data.error.status);
+      }
+      if(r>0){const el=document.getElementById('stxt');if(el) el.textContent='Berhasil setelah retry '+(r+1);}
+      return data;
+    }catch(err){
+      if(err.message.startsWith('Gemini API Error:')) throw err;
+      lastErr=err.message;
+      if(r<maxRetries-1) await new Promise(ok=>setTimeout(ok,2000));
+    }
+  }
+  throw new Error('Gemini sedang sibuk. Coba lagi dalam 1-2 menit.\n\nDetail: '+lastErr);
+}
+
+// Build Gemini request body from system prompt + parts (text + optional images)
+function buildGeminiBody(system, parts){
+  const contents=[];
+  // Convert parts (Anthropic format) to Gemini format
+  const gParts=parts.map(p=>{
+    if(p.type==='text') return {text:p.text};
+    if(p.type==='image') return {inlineData:{mimeType:p.source.media_type,data:p.source.data}};
+    return null;
+  }).filter(Boolean);
+  if(system) gParts.unshift({text:'SYSTEM INSTRUCTIONS:\n'+system+'\n\n---\n'});
+  contents.push({role:'user',parts:gParts});
+  return{contents,generationConfig:{maxOutputTokens:8192,temperature:0.9}};
+}
+
+// Extract text from Gemini response
+function geminiText(data){
+  return data?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
+}
+
+function copyText(text,btn){
+  const done=()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,btn,done));
+  } else { fallbackCopy(text,btn,done); }
+}
+function fallbackCopy(text,btn,done){
+  const ta=document.createElement('textarea');
+  ta.value=text; ta.style.cssText='position:fixed;top:0;left:0;opacity:0;';
+  document.body.appendChild(ta); ta.select();
+  try{document.execCommand('copy');done();}catch(e){alert('Copy gagal, select manual:\n'+text);}
+  document.body.removeChild(ta);
+}
+
+// Event delegation — handles all copy & download buttons
+document.addEventListener('click',function(e){
+  const btn=e.target.closest('[data-copy-key]');
+  const dlBtn=e.target.closest('[data-dl-key]');
+  if(btn){
+    const key=btn.dataset.copyKey;
+    copyText(STORE[key]||'',btn);
+    // If this is a quick scene-pill, also jump to & open the matching detail tab below
+    if(btn.dataset.jumpTarget!==undefined&&btn.dataset.jumpIdx!==undefined){
+      const uid=btn.dataset.jumpTarget, idx=parseInt(btn.dataset.jumpIdx,10);
+      showScU(uid,idx);
+      const target=document.getElementById(uid+'-tab-'+idx);
+      if(target) target.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  }
+  if(dlBtn){
+    const key=dlBtn.dataset.dlKey;
+    const name=dlBtn.dataset.dlName||'prompt.json';
+    const a=document.createElement('a');
+    a.href='data:application/json;charset=utf-8,'+encodeURIComponent(STORE[key]||'');
+    a.download=name; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+});
+let vStyle="UGC",vDur=15,vScene=6,vPlatforms=["Runway","Pika","Hailuo"];
+let iStyle="Commercial Editorial",iRatio="9:16";
+const LANG={Indonesia:"Bahasa Indonesia",Malaysia:"Bahasa Malaysia",Singapore:"Singapore English",Thailand:"Thai",Philippines:"Filipino English"};
+
+function switchTab(t){
+  document.querySelectorAll('.main-tab').forEach((el,i)=>el.classList.toggle('active',['video','image'][i]===t));
+  document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+}
+
+function handleUpload(e,key){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    const b64=r.result.split(',')[1];
+    b64store[key]={data:b64,mime:f.type||'image/jpeg'};
+    const prev=document.getElementById(key+'-prev');
+    prev.src='data:'+f.type+';base64,'+b64; prev.style.display='block';
+    document.getElementById(key+'-zone').classList.add('has-img');
+    document.getElementById(key+'-lbl').innerHTML='<strong>'+f.name+'</strong> — klik ganti';
+    if(key==='vp') document.getElementById('vp-analyze').classList.add('vis');
+  };
+  r.readAsDataURL(f);
+}
+
+async function analyzeProduct(){
+  if(!b64store.vp){alert('Upload foto produk dulu!');return;}
+  const btn=document.getElementById('vp-analyze');
+  btn.disabled=true; btn.textContent='Menganalisis...';
+  try{
+    const key=getKey();
+    const body=buildGeminiBody(null,[
+      {type:'image',source:{media_type:b64store.vp.mime,data:b64store.vp.data}},
+      {type:'text',text:'Analyze this product image. Return ONLY JSON (no markdown): {"product_name":"","description":"1-2 sentences on function and key features","category":"","target_audience":""}'}
+    ]);
+    const data=await geminiWithRetry(key,body);
+    // Cek error dari API dulu
+    if(data.error){
+      alert('Gemini API Error: '+data.error.message+'\n\nStatus: '+data.error.status);
+      btn.disabled=false; btn.textContent='&#128269; Analisis Produk dengan AI'; return;
+    }
+    let raw=geminiText(data);
+    if(!raw){
+      alert('Response kosong dari Gemini. Cek API key lo sudah benar.');
+      btn.disabled=false; btn.textContent='&#128269; Analisis Produk dengan AI'; return;
+    }
+    raw=extractJSON(raw);
+    const p=JSON.parse(raw);
+    document.getElementById('vp-name').value=p.product_name||'';
+    document.getElementById('vp-desc').value=p.description||'';
+    const el=document.getElementById('vp-airesult');
+    document.getElementById('vp-aitext').innerHTML='<b>'+h(p.product_name)+'</b> — '+h(p.category)+'<br><span style="color:var(--muted)">'+h(p.target_audience)+'</span>';
+    el.classList.add('vis');
+    btn.textContent='&#128269; Re-analisis';
+  }catch(err){alert('Error: '+err.message);btn.textContent='&#128269; Analisis Produk dengan AI';}
+  btn.disabled=false;
+}
+
+// pill controls
+function makePills(groupId,cb){
+  document.querySelectorAll('#'+groupId+' .pill').forEach(p=>{
+    p.onclick=()=>{document.querySelectorAll('#'+groupId+' .pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');cb(p.dataset.val);};
+  });
+}
+makePills('v-style',v=>{vStyle=v;});
+makePills('v-dur',v=>{vDur=parseInt(v);updateSI();});
+makePills('i-style',v=>{iStyle=v;});
+makePills('i-ratio',v=>{iRatio=v;});
+document.querySelectorAll('#v-platforms .pcard').forEach(p=>{
+  p.onclick=()=>{
+    p.classList.toggle('active');
+    vPlatforms=[];let sd=6;
+    document.querySelectorAll('#v-platforms .pcard.active').forEach(x=>{vPlatforms.push(x.dataset.val);sd=parseInt(x.dataset.s);});
+    vScene=vPlatforms.length?sd:6; updateSI();
+  };
+});
+
+function updateSI(){
+  const c=Math.max(1,Math.ceil(vDur/vScene));
+  document.getElementById('sc-count').textContent=c+' scenes';
+  document.getElementById('sc-dur').textContent=vDur+'s';
+  document.getElementById('sc-per').textContent=vScene+'s/scene';
+}
+function scCount(){return Math.max(1,Math.ceil(vDur/vScene));}
+function purposes(n){
+  if(n===1)return['Hook + CTA'];
+  if(n===2)return['Hook','CTA'];
+  const mid=['Reveal','Demo','Benefit','Social Proof'];
+  const r=['Hook'];
+  for(let i=0;i<n-2;i++)r.push(mid[i%mid.length]);
+  r.push('CTA'); return r;
+}
+
+function loadingHTML(s){return`<div style="display:flex;flex-direction:column;gap:11px;padding:6px 0;"><div class="lbar on"><div class="lbar-in"></div></div><div class="stxt on" id="stxt">${s}</div></div>`;}
+function startCycle(arr){let i=0;return setInterval(()=>{i=(i+1)%arr.length;const el=document.getElementById('stxt');if(el)el.textContent=arr[i];},1900);}
+
+// ── VIDEO GENERATE ──
+function buildSystemPrompt(country,social,scOverride,psOverride){
+  const sc=scOverride||scCount(), ps=psOverride||purposes(sc), lang=LANG[country];
+  // CTA per platform × per country
+  const CTA_MATRIX={
+    'TikTok':{
+      'Indonesia':'Klik keranjang kuning | badge #FFD700 | Overlay: "Klik Keranjang Kuning!" | VO ending: "langsung klik keranjang kuning ya" | TikTok Shop ID',
+      'Malaysia':'Klik troli kuning | badge #FFD700 | Overlay: "Ketuk Troli Kuning!" | VO ending: "ketuk je troli kuning tu" | TikTok Shop MY',
+      'Singapore':'Tap the yellow cart | badge #FFD700 | Overlay: "Tap Yellow Cart!" | VO ending: "just tap the yellow cart below" | TikTok Shop SG',
+      'Thailand':'กดรถเข็นสีเหลือง | badge #FFD700 | Overlay: "กดรถเข็นเลย!" | VO ending: "กดรถเข็นสีเหลืองได้เลย" | TikTok Shop TH',
+      'Philippines':'Tap the yellow cart | badge #FFD700 | Overlay: "Tap Yellow Cart!" | VO ending: "tap the yellow cart na" | TikTok Shop PH'
+    },
+    'Instagram Reels':{
+      'Indonesia':'Link di bio | badge IG gradient | Overlay: "Link di Bio!" | VO ending: "cek link di bio gue ya"',
+      'Malaysia':'Link di bio | badge IG gradient | Overlay: "Link Di Bio!" | VO ending: "tengok link dalam bio"',
+      'Singapore':'Link in bio | badge IG gradient | Overlay: "Link in Bio!" | VO ending: "check the link in my bio"',
+      'Thailand':'ลิ้งค์ในไบโอ | badge IG gradient | Overlay: "ลิ้งค์ในไบโอ!" | VO ending: "กดลิ้งค์ในไบโอได้เลย"',
+      'Philippines':'Link in bio | badge IG gradient | Overlay: "Link in Bio!" | VO ending: "check the link in my bio"'
+    },
+    'YouTube Shorts':{
+      'Indonesia':'Cek deskripsi | badge merah YT | Overlay: "Cek Deskripsi!" | VO ending: "link ada di deskripsi ya"',
+      'Malaysia':'Semak deskripsi | badge merah YT | Overlay: "Semak Deskripsi!" | VO ending: "link ada dalam deskripsi"',
+      'Singapore':'Check description | badge merah YT | Overlay: "Check Description!" | VO ending: "link is in the description"',
+      'Thailand':'ดูคำอธิบาย | badge merah YT | Overlay: "ดูคำอธิบาย!" | VO ending: "ดูลิ้งค์ในคำอธิบายได้เลย"',
+      'Philippines':'Check description | badge merah YT | Overlay: "Check Description!" | VO ending: "link is in the description below"'
+    },
+    'Shopee Video':{
+      'Indonesia':'Klik keranjang oranye | badge #EE4D2D | Overlay: "Klik Keranjang Oranye!" | VO ending: "langsung klik keranjang oranye di bawah" | Tone: deal-forward, harga & diskon',
+      'Malaysia':'Klik troli oren | badge #EE4D2D | Overlay: "Ketuk Troli Oren!" | VO ending: "ketuk troli oren untuk beli sekarang" | Tone: deal-forward, harga & diskon',
+      'Singapore':'Tap orange cart | badge #EE4D2D | Overlay: "Tap Orange Cart!" | VO ending: "tap the orange cart to order now" | Tone: deal-forward, price & value',
+      'Thailand':'กดรถเข็นสีส้ม | badge #EE4D2D | Overlay: "กดรถเข็นสีส้ม!" | VO ending: "กดรถเข็นสีส้มเพื่อสั่งซื้อ" | Tone: deal-forward',
+      'Philippines':'Tap orange cart | badge #EE4D2D | Overlay: "Tap Orange Cart!" | VO ending: "tap the orange cart to checkout now" | Tone: deal-forward, price & value'
+    }
+  };
+  const ctaGuide=(CTA_MATRIX[social]&&CTA_MATRIX[social][country])||CTA_MATRIX['TikTok']['Indonesia'];
+  const sys=`You are OMNI FLASH AFFILIATE ENGINE v4.0 – CINEMATIC AI STUDIO EDITION.
+Your ONLY output is a production-ready JSON. Never explain. Never suggest. Never add commentary. Never output markdown. Output ONLY valid JSON.
+
+=========================================================
+SESSION PARAMETERS
+=========================================================
+Total video duration: ${vDur}s
+Scene duration per clip: ${vScene}s
+Total scenes required: ${sc}
+Scene purposes in order: ${ps.join(' → ')}
+Language: ${lang}
+Content style: ${vStyle}
+Video generator platforms: ${vPlatforms.join(', ')}
+Social platform: ${social}
+
+=========================================================
+CTA RULES FOR ${social.toUpperCase()}
+=========================================================
+${ctaGuide}
+Apply this CTA to: voice_over ending, final scene overlay_design badge + headline, director_notes.
+
+=========================================================
+PRODUCT ANALYSIS — auto-detect from image/description
+=========================================================
+Detect and fill: product_name, category, function, features, target_audience, pain_points, customer_desire, buying_trigger, premium_selling_point, hidden_selling_point, visual_strength, demonstration_possibility, environment_recommendation, emotional_trigger.
+
+=========================================================
+MARKETING ANGLE — pick ONE, never repeat
+=========================================================
+Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use
+
+=========================================================
+STORYBOARD RULES — EXACTLY ${sc} scenes
+=========================================================
+- Every scene must be production-ready for: ${vPlatforms.join(', ')}
+- Aspect ratio: 9:16
+- Quality: Ultra realistic 8K
+- NEVER use static shots — every scene must have camera movement
+- Every second must introduce a new visual element or camera movement
+- The first ${Math.min(2,vScene)}s of scene 1 must STOP SCROLLING immediately
+- Cut every 0.8–1.5s within each scene
+- Product visibility minimum 40% across all scenes
+- Overlay must always be premium, colorful, highly readable, aesthetically pleasing
+- Headline text: MAXIMUM 4 WORDS
+- Caption: MAXIMUM 3 WORDS
+
+SCENE PURPOSE DNA (apply per scene slot):
+Hook → Pattern interrupt, extreme close-up or shocking visual, zero context drop, stops scroll
+Reveal → Hero product shot, dynamic movement, premium lighting
+Demo → Macro/extreme close-up of product in use, hands-on demonstration
+Benefit → Lifestyle visualization, transformation, emotional payoff
+Social Proof → Testimonial feel, reactions, before/after moment
+CTA → Hero push-in, luxury rim light, CTA overlay, call to action per platform rules above
+
+CAMERA MOVEMENT RULES — never use static:
+- Scene 1: Extreme macro push-in OR whip pan reveal OR speed ramp from black
+- Scene 2: Dolly reveal OR orbit around product OR hero tilt-up
+- Scene 3: 100mm macro with shallow DOF, slow creep forward
+- Scene 4: Dolly out OR parallax movement OR kinetic energy
+- Scene 5+: Hero push-in with lens flare OR final orbit
+
+OVERLAY DESIGN RULES per scene:
+- badge: short power word (e.g. "VIRAL", "TERBUKTI", "LIMITED", "WOW")  
+- headline: MAX 4 WORDS, bold, high contrast, with glow or shadow
+- keyword: gradient + glow, accent color auto-matched to brand
+- background_panel: glass_dark (hook) → glass_light (reveal) → rounded_dark (demo) → gradient_blue (benefit) → premium_glow (CTA)
+- animation: Hook=Kinetic Pop | Reveal=Slide Up | Demo=Zoom Pop | Benefit=Kinetic Text | CTA=Pulse
+- stroke: true, shadow: true on all scenes
+
+TRANSITION RULES:
+Use in sequence: Motion Blur → Whip Pan → Speed Ramp → Zoom Punch → Flash Cut
+
+=========================================================
+VOICE OVER RULES — CRITICAL — DYNAMIC WORD COUNT PER SCENE
+=========================================================
+Language: ${lang}
+Tone: Natural creator, conversational, everyday speech, native local style — sounds like a REAL PERSON talking to a friend, NEVER robotic, NEVER scripted
+
+IMPORTANT: Generate the VO script directly inside EACH scene object as "voice_over_script" — not as a separate combined script.
+
+WORD COUNT IS DYNAMIC — calculated from THIS scene's duration (${vScene}s) AND its purpose. Natural conversational speech runs ~2.2–2.8 words/second in ${lang}. Use this base range for ${vScene}s scenes, then adjust by purpose:
+
+BASE RANGE FOR ${vScene}s SCENES: ${Math.round(vScene*1.7)}–${Math.round(vScene*2.4)} words
+
+PURPOSE ADJUSTMENT (apply on top of base range, same scene duration ≠ same word count):
+- Hook → use the LOWER end of the range. Leave breathing room — visual pattern-interrupt needs space, VO must not compete with overlay text appearing on screen. Short, punchy, curiosity-driving.
+- Reveal → low-to-mid range. Let the visual hero shot breathe.
+- Demo → use the UPPER end of the range. Viewer is already engaged — VO can describe what's being shown in more detail.
+- Benefit → upper end of the range. Most room for emotional/value description.
+- Social Proof → mid range. Conversational, testimonial-style pacing.
+- CTA → mid range. Leave space for the platform CTA overlay (badge/cart icon) to be visually clear — don't cram the VO.
+
+RULES:
+- Each scene's VO must flow naturally if all scenes are read back-to-back as one continuous narrative
+- Use contractions and natural filler words appropriate to ${lang}
+- AVOID: "Dapatkan sekarang!", "Produk terbaik", "Harga terjangkau", any formal/stiff phrasing
+- USE: Casual slang, relatable observations, personal discovery tone
+- Scene 1 (Hook): Open with a natural line that does NOT sound like an ad — pattern interrupt
+- Last scene (CTA): End with a soft recommendation — platform CTA integrated naturally: ${ctaGuide.split('|')[0]}
+- Example tone Indonesia Scene 1 (Hook, short): "Eh ini serius nggak sih, gue baru tau ini..."
+- Example tone Indonesia Demo scene (longer, more detail): "Coba deh lihat teksturnya pas dioles, langsung nyerap nggak lengket sama sekali di kulit"
+- Example tone English Scene 1: "Okay wait, I was NOT expecting this..."
+
+=========================================================
+SOUND DESIGN RULES
+=========================================================
+- Scene 1: Trending sound hook / beat drop / viral audio cue
+- Scene 2: Satisfying product reveal sound (swoosh, pop, shine)
+- Scene 3: Tactile demo sound (texture, liquid, mechanism)
+- Scene 4: Uplifting music swell / emotional beat
+- Scene 5+: Climactic music peak + CTA jingle or notification sound
+
+=========================================================
+EDITING RULES
+=========================================================
+style: Premium Commercial
+cut_every: 0.8–1.5s
+transitions: Motion Blur, Whip Pan, Speed Ramp, Zoom Punch, Flash Cut
+text_priority: Maximum
+mobile_safe_zone: true
+product_visibility: minimum 40%
+
+=========================================================
+DIRECTOR NOTES — ENFORCE THESE
+=========================================================
+visual_rule: Every second must introduce a new visual element or camera movement. Zero boring static frames.
+camera_rule: Never use static shots. Every clip has intentional movement.
+overlay_rule: Overlay must always be premium, colorful, highly readable, and aesthetically pleasing.
+text_rule: Maximum four words per headline. Maximum three words per caption.
+hook_rule: First ${Math.min(2,vScene)}s must stop scrolling immediately — pattern interrupt, no slow intros.
+voice_rule: Must sound like a genuine content creator, never like AI or a TV commercial.
+quality_rule: Every scene must resemble a premium commercial shot — 8K, cinematic, lit perfectly.
+pacing_rule: Fast cuts every 0.8–1.5s. Energy must be high throughout. No dead air.
+
+=========================================================
+OUTPUT STRUCTURE — return EXACTLY this JSON shape
+=========================================================
+{
+  "engine_name": "OMNI FLASH AFFILIATE ENGINE v4.0",
+  "edition": "CINEMATIC AI STUDIO EDITION",
+  "meta": {
+    "total_duration": "${vDur}s",
+    "scene_duration": "${vScene}s",
+    "total_scenes": ${sc},
+    "content_style": "${vStyle}",
+    "language": "${lang}",
+    "social_platform": "${social}",
+    "video_generators": ["${vPlatforms.join('","')}"]
+  },
+  "product_analysis": { "product_name":"","category":"","function":"","target_audience":"","pain_points":[],"buying_trigger":"","premium_selling_point":"","emotional_trigger":"" },
+  "marketing_angle": { "name":"","hook_type":"","core_message":"" },
+  "thumbnail": { "headline":"MAX 4 WORDS","sub_headline":"MAX 5 WORDS","emotion":"","lighting":"Premium Commercial","product_size":"40%" },
+  "scenes": [
+    /* EXACTLY ${sc} scene objects — each scene is a COMPLETE STANDALONE JSON with ALL fields below */
+    /* Each scene includes its own "voice_over_script" field — word count is DYNAMIC per scene duration + purpose, see VOICE OVER RULES above */
+    /* Each scene must be independently copy-pasteable to a video generator */
+  ],
+  "sound_design": { "scene_1":[],"scene_2":[],"scene_3":[],"scene_4":[],"scene_5":[] },
+  "editing": { "style":"Premium Commercial","cut_every":"0.8-1.5s","transitions":["Motion Blur","Whip Pan","Speed Ramp","Zoom Punch","Flash Cut"],"text_priority":"Maximum","mobile_safe_zone":true,"product_visibility":"minimum 40%" },
+  "director_notes": { "visual_rule":"","camera_rule":"","overlay_rule":"","hook_rule":"","voice_rule":"","pacing_rule":"" }
+}
+
+Each scene object — STANDALONE, complete, copy-pasteable to video generator:
+{
+  "scene": 1,
+  "duration_range": "0-${vScene}s",
+  "purpose": "Hook",
+  "voice_over_script": "VO line for THIS scene — word count follows the dynamic range + purpose adjustment from VOICE OVER RULES above, NOT a fixed number",
+  "camera": { "movement": "", "lens": "", "speed": "" },
+  "visual_prompt": { "environment": "Ultra realistic", "subject": "Extremely detailed", "composition": "Commercial Composition", "lighting": "Premium cinematic", "camera_motion": "Dynamic", "depth_of_field": "Realistic", "quality": "Ultra realistic 8K", "aspect_ratio": "9:16" },
+  "motion_prompt": { "camera": "", "subject_motion": "", "background_motion": "", "transition": "" },
+  "overlay_design": {
+    "badge": { "text": "", "background": "Auto", "text_color": "Auto" },
+    "headline": { "text": "MAX 4 WORDS", "font": "Bold Sans", "weight": "900" },
+    "keyword": { "text": "", "color": "Auto", "gradient": true, "glow": true },
+    "background_panel": { "type": "glass_dark", "opacity": 65 },
+    "stroke": true, "shadow": true,
+    "accent": { "type": "underline_glow", "color": "Auto" },
+    "animation": { "intro": "Auto", "loop": "Auto", "exit": "Auto" },
+    "position": "Center"
+  },
+  "caption": "MAX 3 WORDS"
+}`;
+  return sys;
+}
+
+async function generateVideo(angleCount=1){
+  const name=document.getElementById('vp-name').value.trim();
+  const desc=document.getElementById('vp-desc').value.trim();
+  const talent=document.getElementById('vt-text').value.trim();
+  const country=document.getElementById('v-country').value;
+  const social=document.getElementById('v-platform').value;
+  if(!name){alert('Nama produk wajib diisi!');return;}
+  const btn=document.getElementById('v-btn');
+  const btn3=document.getElementById('v-btn3');
+  btn.disabled=true; btn3.disabled=true;
+  btn.textContent='Generating...'; btn3.textContent='Generating...';
+
+  const sc=scCount(), ps=purposes(sc), lang=LANG[country];
+  const sys=buildSystemPrompt(country,social,sc,ps);
+
+  const baseParts=[];
+  if(b64store.vp) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vp.mime,data:b64store.vp.data}});
+  if(b64store.vt) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vt.mime,data:b64store.vt.data}});
+
+  const vout=document.getElementById('v-out');
+  vout.innerHTML=loadingHTML(angleCount>1?'Generating '+angleCount+' angles secara paralel...':'Menganalisis produk dan memilih marketing angle...');
+  const timer=startCycle(['Menganalisis produk...','Menyusun storyboard '+sc+' scene...','Menulis visual & motion prompt...','Membuat voice over script...','Finalisasi JSON...']);
+
+  const ANGLE_LIST=['Problem','Curiosity','Hidden Benefit','Life Hack','Comparison','Pattern Interrupt','POV','Story','Before After','Emotional','Secret','Shocking Fact','Myth','Expert Tip'];
+  const shuffled=[...ANGLE_LIST].sort(()=>Math.random()-0.5);
+  const requestedAngles=shuffled.slice(0,angleCount);
+
+  async function fetchAngle(ai){
+    const angleInstruction=angleCount>1
+      ? `=========================================================
+MARKETING ANGLE — LOCKED FOR THIS REQUEST
+=========================================================
+You MUST use the "${requestedAngles[ai]}" angle. Do not use any other angle. Do not rotate.`
+      : `=========================================================
+MARKETING ANGLE — pick ONE, never repeat
+=========================================================
+Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use`;
+    const sysFinal=sys.replace(`=========================================================
+MARKETING ANGLE — pick ONE, never repeat
+=========================================================
+Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use`, angleInstruction);
+    const parts=[...baseParts,{type:'text',text:`Product: ${name}\nDesc: ${desc||'see image'}\nTalent: ${talent||'auto'}\nCountry: ${country}\nStyle: ${vStyle}\n${sc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${requestedAngles[ai]||'auto'}\nGenerate complete JSON.`}];
+    // Each angle fetch is isolated — if it fails, return an error result instead of throwing,
+    // so one failed angle never breaks the other angles in Promise.all
+    try{
+      const key=getKey();
+      const body=buildGeminiBody(sysFinal,parts);
+      const data=await geminiWithRetry(key,body);
+      let raw=geminiText(data);
+      let js=extractJSON(raw);
+      let parsed=null;
+      try{parsed=JSON.parse(js);}catch(e){
+        js=repairJSON(js);
+        try{parsed=JSON.parse(js);}catch(e2){}
+      }
+      return {parsed,js:js||raw,angle:requestedAngles[ai]||'Auto',failed:false};
+    }catch(err){
+      return {parsed:null,js:'',angle:requestedAngles[ai]||'Auto',failed:true,errorMsg:err.message||'Gagal generate angle ini'};
+    }
+  }
+
+  try{
+    // Run all angle fetches IN PARALLEL — each is isolated via try/catch above,
+    // so Promise.all here is now safe (no single failure cancels the rest)
+    const promises=Array.from({length:angleCount},(_,ai)=>fetchAngle(ai));
+    const results=await Promise.all(promises);
+    clearInterval(timer);
+    renderVideoResults(results,name,sc);
+  }catch(err){clearInterval(timer);vout.innerHTML=errBox(err.message);}
+  btn.disabled=false; btn3.disabled=false;
+  btn.textContent='Generate 1 Angle'; btn3.textContent='3 Angles Sekaligus';
+}
+
+function renderVideoResults(results,name,sc){
+  const vout=document.getElementById('v-out');
+  vout.innerHTML='';
+  if(results.length===1){
+    // Single angle: render directly into vout
+    const wrapper=document.createElement('div');
+    wrapper.style.cssText='display:flex;flex-direction:column;gap:14px;width:100%;';
+    vout.appendChild(wrapper);
+    renderVideo(results[0].parsed,results[0].js,name,sc,wrapper,results[0]);
+    return;
+  }
+  // Multi-angle: render each angle in its own clearly separated box
+  results.forEach((r,i)=>{
+    const ANGLE_COLORS=['var(--accent)','var(--accent2)','var(--gold)'];
+    const color=r.failed?'#E24B4A':ANGLE_COLORS[i%ANGLE_COLORS.length];
+    const box=document.createElement('div');
+    box.style.cssText=`border:2px solid ${color};border-radius:12px;overflow:hidden;margin-bottom:10px;`;
+
+    // Angle header bar
+    const hdr=document.createElement('div');
+    hdr.style.cssText=`background:rgba(0,0,0,.35);border-bottom:1px solid ${color};padding:10px 16px;display:flex;align-items:center;gap:10px;`;
+    hdr.innerHTML=`<span style="font-weight:700;font-size:13px;color:${color};letter-spacing:.06em;text-transform:uppercase;">ANGLE ${i+1}</span><span style="font-size:12px;color:var(--muted);">•</span><span style="font-size:13px;font-weight:600;color:var(--text);">${h(r.angle)}</span>${r.failed?'<span style="margin-left:auto;font-size:11px;color:#E24B4A;font-weight:700;">GAGAL</span>':''}`;
+    box.appendChild(hdr);
+
+    // Content area
+    const content=document.createElement('div');
+    content.style.cssText='display:flex;flex-direction:column;gap:14px;padding:14px;';
+    box.appendChild(content);
+    vout.appendChild(box);
+    renderVideo(r.parsed,r.js,name,sc,content,r);
+  });
+}
+
+function renderVideo(parsed,raw,name,sc,container,failInfo){
+  container=container||document.getElementById('v-out');
+  // If this angle's fetch failed entirely, show a clear error box — never render an empty/silent box
+  if(failInfo&&failInfo.failed){
+    container.innerHTML=`<div style="background:rgba(226,75,74,.08);border:1px solid rgba(226,75,74,.25);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:8px;">
+      <div style="font-size:13px;font-weight:700;color:#E24B4A;">⚠ Angle ini gagal di-generate</div>
+      <div style="font-size:12px;color:var(--muted);">${h(failInfo.errorMsg||'Gemini tidak merespons untuk angle ini.')}</div>
+      <button class="btn-gen" style="width:auto;padding:8px 16px;font-size:13px;" onclick="retryFailedAngle(this)" data-retry-name="${h(name)}" data-retry-angle="${h(failInfo.angle||'')}" data-retry-sc="${sc}">Coba Generate Ulang Angle Ini</button>
+    </div>`;
+    return;
+  }
+  // SAFETY NET: if anything below throws (malformed AI output, unexpected nulls in scene array, etc),
+  // never leave the container silently empty — always show at least raw JSON + an explanation.
+  try{
+    renderVideoInner(parsed,raw,name,sc,container);
+  }catch(err){
+    container.innerHTML=`<div style="background:rgba(226,75,74,.08);border:1px solid rgba(226,75,74,.25);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:13px;font-weight:700;color:#E24B4A;">⚠ Gagal menampilkan hasil (data tidak sesuai format)</div>
+      <div style="font-size:12px;color:var(--muted);">Error: ${h(err.message||String(err))}</div>
+      <div class="jcontent" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:300px;overflow-y:auto;">${h(raw||'(kosong)')}</div>
+      <button class="btn-copy" data-copy-key="${stash(raw||'')}" style="align-self:flex-start;">Copy Raw Output</button>
+    </div>`;
+  }
+}
+
+function renderVideoInner(parsed,raw,name,sc,container){
+  // Use a unique prefix per container call to avoid storyboard tab ID conflicts
+  const uid='v'+(++_si);
+  const angle=parsed?.marketing_angle?.name||'Auto';
+  // Filter out any null/undefined/non-object entries — guards against malformed AI output
+  const rawScenes=(parsed&&(parsed.scenes||parsed.storyboard))||null;
+  const scenesForPills=Array.isArray(rawScenes)?rawScenes.filter(s=>s&&typeof s==='object'):null;
+  let sceneKeysTop=null;
+  let html=`<div class="out-hdr"><span class="out-title">${h(name)}</span><span class="abadge">${h(angle)}</span></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+    <span class="tag-pill" style="background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.25);color:var(--accent);">${vDur}s</span>
+    <span class="tag-pill" style="background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.25);color:var(--gold);">${sc} scenes</span>
+    <span class="tag-pill" style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);color:var(--success);">${vScene}s/scene</span>
+    <span class="tag-pill" style="background:rgba(252,92,125,.12);border:1px solid rgba(252,92,125,.25);color:var(--accent2);">${h(vStyle)}</span>`;
+  if(scenesForPills&&Array.isArray(scenesForPills)){
+    sceneKeysTop=scenesForPills.map(sc2=>stash(JSON.stringify(sc2,null,2)));
+    html+=`<span style="width:1px;height:18px;background:var(--border);margin:0 2px;"></span>`;
+    scenesForPills.forEach((sc2,i)=>{
+      html+=`<button class="btn-copy scene-quick-copy" data-copy-key="${sceneKeysTop[i]}" data-jump-target="${uid}" data-jump-idx="${i}" title="Copy Scene ${i+1} JSON (${h(sc2.purpose||'')})" style="border-color:var(--accent);color:var(--accent);font-weight:700;">Scene ${i+1}</button>`;
+    });
+  }
+  html+=`</div>`;
+  if(parsed){
+    ['product_analysis','marketing_angle','thumbnail','editing'].forEach(k=>{
+      if(parsed[k]) html+=jblock(k.replace(/_/g,' '),JSON.stringify(parsed[k],null,2));
+    });
+    // Reuse the already null-filtered scenes array from above (scenesForPills)
+    const scenes=scenesForPills;
+    if(scenes&&Array.isArray(scenes)){
+      html+=`<div class="jblock"><div class="jblock-hdr"><span class="jblock-title">Scenes — ${scenes.length} clips (klik tab untuk lihat & copy per scene)</span></div>
+      <div style="padding:9px 12px;display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--border);">`;
+      scenes.forEach((sc2,i)=>{html+=`<div class="stab ${i===0?'active':''}" id="${uid}-tab-${i}" onclick="showScU('${uid}',${i})">Scene ${i+1}: ${h(sc2.purpose||'')}</div>`;});
+      html+=`</div>`;
+      scenes.forEach((sc2,i)=>{
+        const sceneKey=sceneKeysTop?sceneKeysTop[i]:stash(JSON.stringify(sc2,null,2));
+        html+=`<div class="scene-p" id="${uid}-scp-${i}" style="${i>0?'display:none':''}">`;
+        html+=`<div style="padding:8px 12px;display:flex;justify-content:flex-end;gap:6px;border-bottom:1px solid var(--border);">
+          <button class="btn-copy" data-copy-key="${sceneKey}">Copy Scene JSON</button>
+        </div>`;
+        html+=`<div class="jcontent">${shl(JSON.stringify(sc2,null,2))}</div>`;
+        html+=`</div>`;
+      });
+      html+=`</div>`;
+    }
+  }
+  if(!parsed){
+    html+=`<div style="background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.2);border-radius:var(--radius);padding:10px 13px;font-size:12px;color:var(--gold);">
+      <strong>⚠ JSON parse gagal</strong> — raw output ditampilkan di bawah. Coba generate ulang.
+    </div>`;
+  }
+  html+=jblock('Full JSON',raw,true);
+  html+=`<div style="display:flex;gap:9px;"><button class="btn-dl" data-dl-key="${stash(raw)}" data-dl-name="${name.replace(/[^a-z0-9]/gi,'-')}-video-prompt.json">&#8659; Download JSON</button></div>`;
+  container.innerHTML=html;
+}
+
+// ── IMAGE GENERATE ──
+async function generateImage(){
+  const name=document.getElementById('ip-name').value.trim();
+  const desc=document.getElementById('ip-desc').value.trim();
+  const talent=document.getElementById('it-text').value.trim();
+  if(!name&&!b64store.ip){alert('Upload produk atau isi nama produk!');return;}
+  const btn=document.getElementById('i-btn');
+  btn.disabled=true; btn.textContent='Generating...';
+
+  const sys=`You are OMNI FLASH IMAGE PROMPT ENGINE — expert commercial product photographer and AI prompt specialist.
+Output ONLY valid JSON. No markdown, no explanation, no commentary.
+
+=========================================================
+IMAGE PROMPT MISSION
+=========================================================
+Generate 4 production-ready prompts for 2 shot types × 2 AI generators.
+Every prompt must be print-quality commercial photography standard.
+
+SHOT TYPE 1 — HERO SHOT
+Focus: Product only. No people. Pure product beauty.
+Goal: Premium packshot / hero visual that stops the scroll.
+Must include: exact lighting setup, surface/background, product angle, lens choice, mood.
+
+SHOT TYPE 2 — LIFESTYLE SHOT  
+Focus: Product in natural use with model/talent.
+Goal: Aspirational, relatable, authentic — looks like organic UGC but shot commercially.
+Must include: environment, model interaction, emotional atmosphere, natural lighting.
+
+=========================================================
+VISUAL STYLE: ${iStyle}
+ASPECT RATIO: ${iRatio}
+TALENT: ${talent || 'auto-select demographically appropriate model for this product'}
+=========================================================
+
+STYLE DNA PER GAYA:
+Commercial Editorial → Clean white/grey backdrop, rim lighting, sharp shadows, magazine quality
+Soft Aesthetic → Pastel tones, diffused golden hour, soft bokeh, dreamy atmosphere
+Bold & Vibrant → High saturation, graphic backgrounds, strong contrast, dynamic angles
+Minimalist Clean → Pure white space, single accent color, geometric composition
+Luxury Premium → Dark moody backdrop, gold/silver accents, dramatic rim light, wet surfaces
+Dark Moody → Low key lighting, deep shadows, atmospheric fog, neon accents
+
+MIDJOURNEY PROMPT RULES:
+- Start with the most important visual element
+- Include: lighting, camera lens (e.g. 85mm f/1.4), mood, color palette, style reference
+- End with: --ar ${iRatio} --v 6.1 --style raw --q 2
+- Be extremely specific — no vague terms like "beautiful" or "nice"
+- Example: "Serum bottle on marble surface, dramatic side lighting from left, deep shadows, luxury editorial, shot on 85mm f/1.4, rich jewel tones, glossy reflections --ar 9:16 --v 6.1 --style raw --q 2"
+
+FLUX/DALL-E PROMPT RULES:
+- Write in natural descriptive language, no Midjourney parameters
+- Describe the scene like a photographer briefing an art director
+- Include: exact environment, lighting direction, camera angle, emotional tone, color story
+- Be detailed — 60-100 words minimum
+
+NEGATIVE PROMPT (universal for both generators):
+Include: blurry, low quality, distorted, watermark, text overlay, oversaturated, plastic-looking, fake, artificial lighting artifacts, overexposed, underexposed, amateur photography
+
+Return ONLY this JSON:
+{
+  "hero_shot": {
+    "concept": "one line visual concept description",
+    "midjourney": "full optimized Midjourney prompt ending with --ar ${iRatio} --v 6.1 --style raw --q 2",
+    "flux": "full detailed natural language prompt for Flux or DALL-E, 60-100 words"
+  },
+  "lifestyle_shot": {
+    "concept": "one line visual concept description", 
+    "midjourney": "full optimized Midjourney prompt ending with --ar ${iRatio} --v 6.1 --style raw --q 2",
+    "flux": "full detailed natural language prompt for Flux or DALL-E, 60-100 words"
+  },
+  "negative_prompt": "comprehensive negative prompt for both generators",
+  "style_notes": "2-3 sentences on key lighting and mood choices made and why"
+}`;
+
+  const parts=[];
+  if(b64store.ip) parts.push({type:'image',source:{type:'base64',media_type:b64store.ip.mime,data:b64store.ip.data}});
+  if(b64store.it) parts.push({type:'image',source:{type:'base64',media_type:b64store.it.mime,data:b64store.it.data}});
+  parts.push({type:'text',text:`Product: ${name||'see image'}\nDesc: ${desc||'analyze from image'}\nTalent: ${talent||'auto'}\nStyle: ${iStyle}\nRatio: ${iRatio}\nGenerate 4 image prompts.`});
+
+  document.getElementById('i-out').innerHTML=loadingHTML('Menganalisis mood dan visual style...');
+  const timer=startCycle(['Menganalisis visual style...','Menyusun hero shot concept...','Menulis lifestyle shot prompt...','Formatting untuk MJ & Flux...']);
+
+  try{
+    const key=getKey();
+    const body=buildGeminiBody(sys,parts);
+    const data=await geminiWithRetry(key,body);
+    clearInterval(timer);
+    let raw=geminiText(data);
+    let js=extractJSON(raw);
+    let parsed=null;
+    try{parsed=JSON.parse(js);}catch(e){
+      js=repairJSON(js);
+      try{parsed=JSON.parse(js);}catch(e2){}
+    }
+    renderImage(parsed,js||raw,name);
+  }catch(err){clearInterval(timer);document.getElementById('i-out').innerHTML=errBox(err.message);}
+  btn.disabled=false; btn.textContent='Generate Image Prompts';
+}
+
+function renderImage(parsed,raw,name){
+  let html=`<div class="out-hdr"><span class="out-title">${h(name||'Image Prompts')}</span><span class="abadge">${h(iStyle)}</span></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+    <span class="tag-pill" style="background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.25);color:var(--accent);">${iRatio}</span>
+    <span class="tag-pill" style="background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);color:var(--success);">Hero + Lifestyle</span>
+    <span class="tag-pill" style="background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.25);color:var(--gold);">Midjourney + Flux</span>
+  </div>`;
+
+  if(parsed){
+    const shots=[{key:'hero_shot',label:'Hero Shot',hc:'ib-hero'},{key:'lifestyle_shot',label:'Lifestyle Shot',hc:'ib-life'}];
+    shots.forEach(s=>{
+      const shot=parsed[s.key]; if(!shot) return;
+      html+=`<div class="icard"><div class="icard-hdr"><div style="display:flex;align-items:center;gap:8px;"><span class="ibadge ${s.hc}">${s.label}</span><span style="font-size:12px;color:var(--muted);">${h(shot.concept||'')}</span></div></div>`;
+      if(shot.midjourney){html+=`<div style="border-bottom:1px solid var(--border);"><div style="padding:8px 13px 0;display:flex;align-items:center;justify-content:space-between;"><span class="ibadge ib-mj">Midjourney</span><button class="btn-copy" data-copy-key="${stash(shot.midjourney)}">Copy</button></div><div class="ptxt">${h(shot.midjourney)}</div></div>`;}
+      if(shot.flux){html+=`<div><div style="padding:8px 13px 0;display:flex;align-items:center;justify-content:space-between;"><span class="ibadge ib-flux">Flux / DALL-E</span><button class="btn-copy" data-copy-key="${stash(shot.flux)}">Copy</button></div><div class="ptxt">${h(shot.flux)}</div></div>`;}
+      html+=`</div>`;
+    });
+    if(parsed.negative_prompt){html+=`<div class="icard"><div class="icard-hdr"><span class="ibadge ib-neg">Negative Prompt</span><button class="btn-copy" data-copy-key="${stash(parsed.negative_prompt)}">Copy</button></div><div class="ptxt">${h(parsed.negative_prompt)}</div></div>`;}
+    if(parsed.style_notes){html+=`<div style="background:rgba(124,92,252,.06);border:1px solid rgba(124,92,252,.15);border-radius:var(--radius);padding:11px 13px;font-size:13px;color:var(--muted);"><strong style="color:var(--accent);font-size:10px;letter-spacing:.08em;text-transform:uppercase;">Style Notes</strong><br>${h(parsed.style_notes)}</div>`;}
+  }else{html+=jblock('Raw Output',raw,true);}
+  html+=`<div style="display:flex;gap:9px;"><button class="btn-dl" data-dl-key="${stash(raw)}" data-dl-name="image-prompts.json">&#8659; Download JSON</button></div>`;
+  document.getElementById('i-out').innerHTML=html;
+}
+
+// ── Helpers ──
+function jblock(label,content,isRaw){const k=stash(content);return`<div class="jblock"><div class="jblock-hdr"><span class="jblock-title">${h(label)}</span><button class="btn-copy" data-copy-key="${k}">Copy</button></div><div class="jcontent">${isRaw?h(content):shl(content)}</div></div>`;}
+async function retryFailedAngle(btn){
+  btn.disabled=true; btn.textContent='Mencoba lagi...';
+  // Find this button's containing box (the angle's own container) so we only replace THAT box,
+  // leaving other already-successful angle boxes on screen untouched.
+  const container=btn.closest('div').parentElement; // the content div passed to renderVideo
+  const retryName=btn.dataset.retryName||'';
+  const retryAngle=btn.dataset.retryAngle||'';
+  const retrySc=parseInt(btn.dataset.retrySc,10)||1;
+
+  // Re-fetch using the SAME locked angle (not a random new one), same product context
+  const productName=document.getElementById('vp-name')?document.getElementById('vp-name').value.trim():retryName;
+  const productDesc=document.getElementById('vp-desc')?document.getElementById('vp-desc').value.trim():'';
+  const talentDesc=document.getElementById('vt-text')?document.getElementById('vt-text').value.trim():'';
+  const country=document.getElementById('v-country')?document.getElementById('v-country').value:'Indonesia';
+  const social=document.getElementById('v-platform')?document.getElementById('v-platform').value:'TikTok';
+  const ps=purposes(retrySc);
+
+  container.innerHTML=loadingHTML('Mencoba ulang angle "'+retryAngle+'"...');
+
+  try{
+    const baseParts=[];
+    if(b64store.vp) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vp.mime,data:b64store.vp.data}});
+    if(b64store.vt) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vt.mime,data:b64store.vt.data}});
+
+    const angleInstruction=`=========================================================
+MARKETING ANGLE — LOCKED FOR THIS REQUEST
+=========================================================
+You MUST use the "${retryAngle}" angle. Do not use any other angle. Do not rotate.`;
+    const sys=buildSystemPrompt(country,social,retrySc,ps);
+    const sysFinal=sys.replace(`=========================================================
+MARKETING ANGLE — pick ONE, never repeat
+=========================================================
+Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use`, angleInstruction);
+    const parts=[...baseParts,{type:'text',text:`Product: ${productName}\nDesc: ${productDesc||'see image'}\nTalent: ${talentDesc||'auto'}\nCountry: ${country}\nStyle: ${vStyle}\n${retrySc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${retryAngle}\nGenerate complete JSON.`}];
+
+    const key=getKey();
+    const body=buildGeminiBody(sysFinal,parts);
+    const data=await geminiWithRetry(key,body);
+    let raw=geminiText(data);
+    let js=extractJSON(raw);
+    let parsed=null;
+    try{parsed=JSON.parse(js);}catch(e){
+      js=repairJSON(js);
+      try{parsed=JSON.parse(js);}catch(e2){}
+    }
+    renderVideo(parsed,js||raw,productName,retrySc,container,{failed:false});
+  }catch(err){
+    renderVideo(null,'',productName,retrySc,container,{failed:true,angle:retryAngle,errorMsg:err.message||'Gagal lagi, coba sekali lagi'});
+  }
+}
+
+function showScU(uid,idx){
+  // Show/hide scenes scoped to this specific uid prefix (avoids cross-angle conflicts)
+  document.querySelectorAll(`[id^="${uid}-scp-"]`).forEach(p=>{
+    const i=parseInt(p.id.replace(uid+'-scp-',''));
+    p.style.display=i===idx?'':'none';
+  });
+  // Update stab active state — scoped to stabs that reference this uid
+  document.querySelectorAll('.stab').forEach(t=>{
+    const fn=t.getAttribute('onclick')||'';
+    if(fn.includes(`'${uid}'`)){
+      const iMatch=fn.match(/,(\d+)\)/);
+      if(iMatch) t.classList.toggle('active',parseInt(iMatch[1])===idx);
+    }
+  });
+}
+function showSc(idx){document.querySelectorAll('.scene-p').forEach((p,i)=>p.style.display=i===idx?'':'none');document.querySelectorAll('.stab').forEach((t,i)=>t.classList.toggle('active',i===idx));}
+function shl(s){return h(s).replace(/"([^"]+)":/g,'<span class="jk">"$1"</span>:').replace(/: "([^"]*)"/g,': <span class="js">"$1"</span>').replace(/: (\d+)/g,': <span class="jn">$1</span>');}
+function h(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function errBox(msg){return`<div style="color:#f87171;padding:18px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:10px;"><strong>Error:</strong> ${h(msg)}</div>`;}
+function cpyTxt(btn,text){navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);});}
+function dlJSON(content,filename){const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(content);a.download=filename;a.click();}
+
+updateSI();
+</script>
+</body>
+</html>
