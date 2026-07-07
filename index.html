@@ -537,7 +537,7 @@ function makePills(groupId,cb){
   });
 }
 makePills('v-style',v=>{vStyle=v;});
-makePills('v-dur',v=>{vDur=parseInt(v);updateSI();
+makePills('v-dur',v=>{vDur=parseInt(v);updateSI();});
 
 // ── License gate ──
 (function(){
@@ -606,7 +606,7 @@ async function submitLicense(){
     btn.textContent = 'Aktivasi';
     btn.disabled = false;
   }
-}});
+}
 makePills('i-style',v=>{iStyle=v;});
 makePills('i-ratio',v=>{iRatio=v;});
 document.querySelectorAll('#v-platforms .pcard').forEach(p=>{
