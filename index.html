@@ -9,6 +9,24 @@
 :root{--bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;--border:#2a2a3a;--accent:#7c5cfc;--accent2:#fc5c7d;--gold:#f5c842;--text:#e8e8f0;--muted:#7070a0;--success:#4ade80;--radius:10px;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:15px;line-height:1.6;min-height:100vh;}
+#license-gate{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;}
+#license-gate.hidden{display:none;}
+.gate-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 32px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:20px;}
+.gate-logo{display:flex;align-items:center;gap:12px;}
+.gate-logo-mark{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+.gate-title{font-size:18px;font-weight:700;letter-spacing:.02em;}
+.gate-sub{font-size:13px;color:var(--muted);line-height:1.5;}
+.gate-input-wrap{display:flex;flex-direction:column;gap:8px;}
+.gate-input-label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.gate-input{background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Space Mono',monospace;font-size:14px;padding:12px 14px;width:100%;outline:none;transition:border-color .2s;letter-spacing:.08em;}
+.gate-input:focus{border-color:var(--accent);}
+.gate-input.error{border-color:#E24B4A;}
+.gate-error{font-size:12px;color:#E24B4A;display:none;}
+.gate-error.visible{display:block;}
+.gate-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:10px;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;padding:13px;cursor:pointer;transition:opacity .2s;letter-spacing:.04em;}
+.gate-btn:hover{opacity:.9;}
+.gate-btn:disabled{opacity:.4;cursor:not-allowed;}
+.gate-footer{font-size:11px;color:var(--muted);text-align:center;line-height:1.6;}
 header{border-bottom:1px solid var(--border);padding:15px 26px;display:flex;align-items:center;gap:13px;}
 .logo-mark{width:33px;height:33px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
 .logo-text{font-size:15px;font-weight:600;letter-spacing:.04em;}
@@ -108,6 +126,29 @@ select option{background:#1a1a26;}
 </style>
 </head>
 <body>
+<div id="license-gate">
+  <div class="gate-card">
+    <div class="gate-logo">
+      <div class="gate-logo-mark">OF</div>
+      <div>
+        <div style="font-size:15px;font-weight:600;letter-spacing:.04em;">OMNI FLASH</div>
+        <div style="font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;">Cinematic AI Studio v4.0</div>
+      </div>
+    </div>
+    <div>
+      <div class="gate-title">Masukkan License Key</div>
+      <div class="gate-sub" style="margin-top:6px;">Akses tools ini memerlukan license key yang valid. Hubungi penjual untuk mendapatkan license key Anda.</div>
+    </div>
+    <div class="gate-input-wrap">
+      <div class="gate-input-label">License Key</div>
+      <input class="gate-input" id="license-input" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="24" autocomplete="off" spellcheck="false">
+      <div class="gate-error" id="gate-error">License key tidak valid. Periksa kembali atau hubungi penjual.</div>
+    </div>
+    <button class="gate-btn" id="gate-btn" onclick="submitLicense()">Aktivasi</button>
+    <div class="gate-footer">Tools ini dilindungi license. Dilarang mendistribusikan tanpa izin.</div>
+  </div>
+</div>
+
 <header>
   <div class="logo-mark">OF</div>
   <div><div class="logo-text">OMNI FLASH</div><div class="logo-sub">Cinematic AI Studio v4.0</div></div>
@@ -496,7 +537,76 @@ function makePills(groupId,cb){
   });
 }
 makePills('v-style',v=>{vStyle=v;});
-makePills('v-dur',v=>{vDur=parseInt(v);updateSI();});
+makePills('v-dur',v=>{vDur=parseInt(v);updateSI();
+
+// ── License gate ──
+(function(){
+  // Cek apakah sudah pernah aktivasi di session ini
+  const saved = sessionStorage.getItem('omniflash_license');
+  if(saved === 'valid'){
+    document.getElementById('license-gate').classList.add('hidden');
+    return;
+  }
+  // Format input otomatis jadi XXXX-XXXX-XXXX-XXXX
+  const inp = document.getElementById('license-input');
+  if(inp){
+    inp.addEventListener('input', function(){
+      let val = this.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase();
+      if(val.length > 16) val = val.slice(0,16);
+      let formatted = val.match(/.{1,4}/g)?.join('-') || val;
+      this.value = formatted;
+      this.classList.remove('error');
+      document.getElementById('gate-error').classList.remove('visible');
+    });
+    inp.addEventListener('keydown', function(e){
+      if(e.key === 'Enter') submitLicense();
+    });
+  }
+})();
+
+async function submitLicense(){
+  const input = document.getElementById('license-input');
+  const btn = document.getElementById('gate-btn');
+  const errEl = document.getElementById('gate-error');
+  const key = (input?.value||'').replace(/-/g,'').toUpperCase().trim();
+
+  if(!key || key.length < 8){
+    input.classList.add('error');
+    errEl.textContent = 'License key terlalu pendek.';
+    errEl.classList.add('visible');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Memvalidasi...';
+
+  try{
+    const res = await fetch('/api/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key })
+    });
+    const data = await res.json();
+
+    if(data.valid){
+      sessionStorage.setItem('omniflash_license', 'valid');
+      document.getElementById('license-gate').classList.add('hidden');
+      btn.textContent = 'Aktivasi';
+      btn.disabled = false;
+    } else {
+      input.classList.add('error');
+      errEl.textContent = 'License key tidak valid. Periksa kembali atau hubungi penjual.';
+      errEl.classList.add('visible');
+      btn.textContent = 'Aktivasi';
+      btn.disabled = false;
+    }
+  }catch(err){
+    errEl.textContent = 'Gagal terhubung ke server validasi. Coba lagi.';
+    errEl.classList.add('visible');
+    btn.textContent = 'Aktivasi';
+    btn.disabled = false;
+  }
+}});
 makePills('i-style',v=>{iStyle=v;});
 makePills('i-ratio',v=>{iRatio=v;});
 document.querySelectorAll('#v-platforms .pcard').forEach(p=>{
