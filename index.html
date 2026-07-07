@@ -156,7 +156,7 @@ select option{background:#1a1a26;}
           <select id="v-country"><option>Indonesia</option><option>Malaysia</option><option>Singapore</option><option>Thailand</option><option>Philippines</option></select>
         </div>
         <div class="field"><label>Platform sosial</label>
-          <select id="v-platform"><option>TikTok</option><option>Instagram Reels</option><option>YouTube Shorts</option><option>Shopee Video</option></select>
+          <select id="v-platform"><option>TikTok</option><option>Instagram Reels</option><option>YouTube Shorts</option><option>Shopee Video</option><option>General</option></select>
         </div>
       </div>
     </div>
@@ -182,19 +182,22 @@ select option{background:#1a1a26;}
     </div>
     <div>
       <div class="slabel">Platform Video Generator</div>
-      <div class="pgrid" id="v-platforms">
-        <div class="pcard active" data-val="Runway" data-s="6"><div class="pn">Runway</div><div class="pd">6s</div></div>
-        <div class="pcard active" data-val="Pika" data-s="6"><div class="pn">Pika</div><div class="pd">6s</div></div>
-        <div class="pcard active" data-val="Hailuo" data-s="6"><div class="pn">Hailuo</div><div class="pd">6s</div></div>
-        <div class="pcard" data-val="Kling" data-s="8"><div class="pn">Kling</div><div class="pd">8s</div></div>
-        <div class="pcard" data-val="PixVerse" data-s="8"><div class="pn">PixVerse</div><div class="pd">8s</div></div>
-        <div class="pcard" data-val="Seedance" data-s="10"><div class="pn">Seedance</div><div class="pd">10s</div></div>
-        <div class="pcard" data-val="Veo" data-s="10"><div class="pn">Veo</div><div class="pd">10s</div></div>
+      <div style="display:flex;gap:8px;" id="v-platforms">
+        <div class="pcard active" data-val="6s" data-s="6" style="flex:1;padding:10px 6px;"><div class="pn">6 detik</div><div class="pd">per scene</div></div>
+        <div class="pcard" data-val="8s" data-s="8" style="flex:1;padding:10px 6px;"><div class="pn">8 detik</div><div class="pd">per scene</div></div>
+        <div class="pcard" data-val="10s" data-s="10" style="flex:1;padding:10px 6px;"><div class="pn">10 detik</div><div class="pd">per scene</div></div>
       </div>
     </div>
     <div class="scene-info"><div class="sdot"></div><div><span>Estimasi: </span><strong id="sc-count">3 scenes</strong><span> untuk </span><strong id="sc-dur">15s</strong><span> @ </span><strong id="sc-per">6s/scene</strong></div></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-  <button class="btn-gen" id="v-btn" onclick="generateVideo(1)" style="font-size:13px;">Generate 1 Angle</button>
+  <div style="display:flex;align-items:center;gap:10px;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.15);border-radius:var(--radius);padding:9px 13px;">
+  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:#b0b0cc;margin:0;">
+    <input type="checkbox" id="herbal-mode" style="width:15px;height:15px;accent-color:var(--success);cursor:pointer;">
+    <span>Mode Herbal</span>
+  </label>
+  <span style="font-size:11px;color:var(--muted);flex:1;">Proteksi overclaim otomatis</span>
+</div>
+<button class="btn-gen" id="v-btn" onclick="generateVideo(1)" style="font-size:13px;">Generate 1 Angle</button>
   <button class="btn-gen" id="v-btn3" onclick="generateVideo(3)" style="font-size:13px;background:linear-gradient(135deg,#f5c842,#fc5c7d);">3 Angles Sekaligus</button>
 </div>
   </div>
@@ -368,6 +371,43 @@ function fallbackCopy(text,btn,done){
   document.body.removeChild(ta);
 }
 
+// Herbal overclaim checker — scans voice_over_script fields after generation
+function checkOverclaim(parsed){
+  if(!parsed) return [];
+  const BANNED=[
+    'sembuh','menyembuhkan','mengobati','obati','cure','cures','heals','healing',
+    'treat','treats','treatment','clinically proven','clinically tested',
+    'terbukti klinis','tanpa efek samping','no side effects','dokter rekomen',
+    'doctor recommended','menjamin','guarantee','guaranteed','permanen','permanent'
+  ];
+  const warnings=[];
+  const scenes=parsed.scenes||parsed.storyboard||[];
+  scenes.forEach((sc,i)=>{
+    const vo=(sc.voice_over_script||'').toLowerCase();
+    const headline=(sc.overlay_design?.headline?.text||'').toLowerCase();
+    const caption=(sc.caption||'').toLowerCase();
+    const badge=(sc.overlay_design?.badge?.text||'').toLowerCase();
+    const combined=vo+' '+headline+' '+caption+' '+badge;
+    BANNED.forEach(word=>{
+      if(combined.includes(word.toLowerCase())){
+        warnings.push({scene:i+1,word,field:vo.includes(word)?'VO':headline.includes(word)?'Headline':'Text'});
+      }
+    });
+  });
+  return warnings;
+}
+
+function showOverclaimWarning(warnings,container){
+  if(!warnings||warnings.length===0) return;
+  const msg=warnings.map(w=>`Scene ${w.scene} [${w.field}]: kata "${w.word}" terdeteksi`).join('<br>');
+  const el=document.createElement('div');
+  el.style.cssText='background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.3);border-radius:10px;padding:12px 14px;font-size:12px;margin-bottom:8px;';
+  el.innerHTML=`<div style="font-weight:700;color:var(--gold);margin-bottom:6px;">⚠ Peringatan Overclaim Terdeteksi</div>
+    <div style="color:#c0c0a0;line-height:1.8;">${msg}</div>
+    <div style="color:var(--muted);margin-top:6px;font-size:11px;">Kata-kata ini berisiko pelanggaran pada konten herbal/kesehatan. Pertimbangkan untuk generate ulang atau edit manual.</div>`;
+  container.insertBefore(el, container.firstChild);
+}
+
 // Event delegation — handles all copy & download buttons
 document.addEventListener('click',function(e){
   const btn=e.target.closest('[data-copy-key]');
@@ -391,7 +431,7 @@ document.addEventListener('click',function(e){
     a.download=name; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 });
-let vStyle="UGC",vDur=15,vScene=6,vPlatforms=["Runway","Pika","Hailuo"];
+let vStyle="UGC",vDur=15,vScene=6,vPlatforms=["6s"];
 let iStyle="Commercial Editorial",iRatio="9:16";
 const LANG={Indonesia:"Bahasa Indonesia",Malaysia:"Bahasa Malaysia",Singapore:"Singapore English",Thailand:"Thai",Philippines:"Filipino English"};
 
@@ -461,10 +501,12 @@ makePills('i-style',v=>{iStyle=v;});
 makePills('i-ratio',v=>{iRatio=v;});
 document.querySelectorAll('#v-platforms .pcard').forEach(p=>{
   p.onclick=()=>{
-    p.classList.toggle('active');
-    vPlatforms=[];let sd=6;
-    document.querySelectorAll('#v-platforms .pcard.active').forEach(x=>{vPlatforms.push(x.dataset.val);sd=parseInt(x.dataset.s);});
-    vScene=vPlatforms.length?sd:6; updateSI();
+    // Single-select: deactivate all, activate only clicked
+    document.querySelectorAll('#v-platforms .pcard').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    vScene=parseInt(p.dataset.s)||6;
+    vPlatforms=[p.dataset.val];
+    updateSI();
   };
 });
 
@@ -488,7 +530,7 @@ function loadingHTML(s){return`<div style="display:flex;flex-direction:column;ga
 function startCycle(arr){let i=0;return setInterval(()=>{i=(i+1)%arr.length;const el=document.getElementById('stxt');if(el)el.textContent=arr[i];},1900);}
 
 // ── VIDEO GENERATE ──
-function buildSystemPrompt(country,social,scOverride,psOverride){
+function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal){
   const sc=scOverride||scCount(), ps=psOverride||purposes(sc), lang=LANG[country];
   // CTA per platform × per country
   const CTA_MATRIX={
@@ -519,6 +561,13 @@ function buildSystemPrompt(country,social,scOverride,psOverride){
       'Singapore':'Tap orange cart | badge #EE4D2D | Overlay: "Tap Orange Cart!" | VO ending: "tap the orange cart to order now" | Tone: deal-forward, price & value',
       'Thailand':'กดรถเข็นสีส้ม | badge #EE4D2D | Overlay: "กดรถเข็นสีส้ม!" | VO ending: "กดรถเข็นสีส้มเพื่อสั่งซื้อ" | Tone: deal-forward',
       'Philippines':'Tap orange cart | badge #EE4D2D | Overlay: "Tap Orange Cart!" | VO ending: "tap the orange cart to checkout now" | Tone: deal-forward, price & value'
+    },
+    'General':{
+      'Indonesia':'Cek info lengkap di link yang tersedia | badge netral | Overlay: "Cek Selengkapnya!" | VO ending: "cek link-nya ya buat info lebih lanjut" | Tone: informative, platform-neutral',
+      'Malaysia':'Dapatkan maklumat lanjut di pautan | badge netral | Overlay: "Info Lanjut!" | VO ending: "tengok pautan untuk maklumat lanjut" | Tone: informative, platform-neutral',
+      'Singapore':'Find out more via the link | badge netral | Overlay: "Find Out More!" | VO ending: "check the link for more details" | Tone: informative, platform-neutral',
+      'Thailand':'ดูข้อมูลเพิ่มเติมที่ลิ้งค์ | badge netral | Overlay: "ดูเพิ่มเติม!" | VO ending: "ดูรายละเอียดเพิ่มเติมได้ที่ลิ้งค์" | Tone: informative, platform-neutral',
+      'Philippines':'Find out more via the link | badge netral | Overlay: "Find Out More!" | VO ending: "check the link for more info" | Tone: informative, platform-neutral'
     }
   };
   const ctaGuide=(CTA_MATRIX[social]&&CTA_MATRIX[social][country])||CTA_MATRIX['TikTok']['Indonesia'];
@@ -542,6 +591,38 @@ CTA RULES FOR ${social.toUpperCase()}
 =========================================================
 ${ctaGuide}
 Apply this CTA to: voice_over ending, final scene overlay_design badge + headline, director_notes.
+
+${isHerbal?`
+=========================================================
+HERBAL / HEALTH PRODUCT PROTECTION — MANDATORY
+=========================================================
+This product is in the herbal/health category. The following rules are STRICT and NON-NEGOTIABLE:
+
+BANNED WORDS & PHRASES (never use in voice_over_script, headline, caption, badge, or any text):
+- Menyembuhkan / menyembuhkan / sembuh / cure / cures / heals / healing
+- Mengobati / obat / treat / treats / treatment / therapeutic
+- Menghilangkan penyakit / eliminates disease
+- Terbukti secara klinis / clinically proven / clinically tested (unless verified)
+- 100% aman / 100% safe (absolute safety claims)
+- Tanpa efek samping / no side effects (absolute claims)
+- Dokter merekomendasikan / doctor recommended (unless verified)
+- Menjamin / garantee / guaranteed results
+- Permanen / permanent results
+
+SAFE ALTERNATIVES TO USE INSTEAD:
+- "membantu menjaga" / "helps maintain" → instead of "menyembuhkan"
+- "mendukung kesehatan" / "supports health" → instead of "mengobati"  
+- "formulasi herbal alami" / "natural herbal formula" → neutral product description
+- "dirasakan manfaatnya" / "feel the benefits" → instead of guaranteed results
+- "cocok untuk rutinitas harianmu" / "fits your daily routine" → lifestyle framing
+
+MANDATORY DISCLAIMER — append this to voice_over_script of the LAST SCENE (CTA scene):
+- Indonesia/Malaysia: "Produk ini bukan obat. Konsultasikan dengan tenaga kesehatan."
+- Singapore/Philippines/English: "This product is not medicine. Consult a healthcare professional."
+- Thailand: "ผลิตภัณฑ์นี้ไม่ใช่ยา ปรึกษาผู้เชี่ยวชาญด้านสุขภาพ"
+
+TONE GUIDANCE: Frame product benefits as lifestyle enhancement and natural support, NOT medical treatment. Use discovery and personal experience tone, not medical authority tone.
+`:''}
 
 =========================================================
 PRODUCT ANALYSIS — auto-detect from image/description
@@ -721,7 +802,8 @@ async function generateVideo(angleCount=1){
   btn.textContent='Generating...'; btn3.textContent='Generating...';
 
   const sc=scCount(), ps=purposes(sc), lang=LANG[country];
-  const sys=buildSystemPrompt(country,social,sc,ps);
+  const isHerbal=document.getElementById('herbal-mode')?.checked||false;
+  const sys=buildSystemPrompt(country,social,sc,ps,isHerbal);
 
   const baseParts=[];
   if(b64store.vp) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vp.mime,data:b64store.vp.data}});
@@ -892,6 +974,12 @@ function renderVideoInner(parsed,raw,name,sc,container){
   html+=jblock('Full JSON',raw,true);
   html+=`<div style="display:flex;gap:9px;"><button class="btn-dl" data-dl-key="${stash(raw)}" data-dl-name="${name.replace(/[^a-z0-9]/gi,'-')}-video-prompt.json">&#8659; Download JSON</button></div>`;
   container.innerHTML=html;
+  // Run overclaim check if herbal mode is on — insert warning banner at top of container
+  const herbalOn=document.getElementById('herbal-mode')?.checked||false;
+  if(herbalOn&&parsed){
+    const warnings=checkOverclaim(parsed);
+    if(warnings.length>0) showOverclaimWarning(warnings,container);
+  }
 }
 
 // ── IMAGE GENERATE ──
@@ -1047,7 +1135,8 @@ async function retryFailedAngle(btn){
 MARKETING ANGLE — LOCKED FOR THIS REQUEST
 =========================================================
 You MUST use the "${retryAngle}" angle. Do not use any other angle. Do not rotate.`;
-    const sys=buildSystemPrompt(country,social,retrySc,ps);
+    const isHerbal=document.getElementById('herbal-mode')?.checked||false;
+    const sys=buildSystemPrompt(country,social,retrySc,ps,isHerbal);
     const sysFinal=sys.replace(`=========================================================
 MARKETING ANGLE — pick ONE, never repeat
 =========================================================
