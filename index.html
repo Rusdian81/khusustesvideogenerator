@@ -542,7 +542,7 @@ makePills('v-dur',v=>{vDur=parseInt(v);updateSI();});
 // ── License gate ──
 (function(){
   // Cek apakah sudah pernah aktivasi di session ini
-  const saved = sessionStorage.getItem('omniflash_license');
+  const saved = localStorage.getItem('omniflash_license');
   if(saved === 'valid'){
     document.getElementById('license-gate').classList.add('hidden');
     return;
@@ -589,7 +589,7 @@ async function submitLicense(){
     const data = await res.json();
 
     if(data.valid){
-      sessionStorage.setItem('omniflash_license', 'valid');
+      localStorage.setItem('omniflash_license', 'valid');
       document.getElementById('license-gate').classList.add('hidden');
       btn.textContent = 'Aktivasi';
       btn.disabled = false;
