@@ -22,9 +22,10 @@ export default async function handler(req) {
     // License keys disimpan di Vercel Environment Variable bernama LICENSE_KEYS
     // Format: key1,key2,key3 (dipisah koma)
     const rawKeys = process.env.LICENSE_KEYS || '';
-    const validKeys = rawKeys.split(',').map(k => k.trim()).filter(Boolean);
-
-    const isValid = validKeys.includes(key.trim().toUpperCase());
+    // Strip dashes from both stored keys and submitted key before comparing
+    // so OMNI-XG9J-3MN6-HQCC matches OMNIXG9J3MN6HQCC and vice versa
+    const validKeys = rawKeys.split(',').map(k => k.trim().replace(/-/g,'').toUpperCase()).filter(Boolean);
+    const isValid = validKeys.includes(key.trim().replace(/-/g,'').toUpperCase());
 
     // Rate limit sederhana via response — tidak log key yang dicoba
     return new Response(JSON.stringify({ valid: isValid }), {
