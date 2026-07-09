@@ -705,6 +705,10 @@ function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal,isEduka
     }
   };
   const ctaGuide=(CTA_MATRIX[social]&&CTA_MATRIX[social][country])||CTA_MATRIX['TikTok']['Indonesia'];
+  // Edukasi mode: CTA completely disabled — override ctaGuide with neutral instruction
+  const activeCTA=isEdukasi
+    ? 'NO CTA — This is educational content. Do NOT mention any platform, cart, link, or call-to-action anywhere in this video.'
+    : ctaGuide;
   const eduBlock=isEdukasi?`
 =========================================================
 EDUKASI MODE — MANDATORY RULES
@@ -802,7 +806,7 @@ Social platform: ${social}
 =========================================================
 CTA RULES FOR ${social.toUpperCase()}
 =========================================================
-${ctaGuide}
+${activeCTA}
 Apply this CTA to: voice_over ending, final scene overlay_design badge + headline, director_notes.
 
 ${eduBlock}
@@ -885,7 +889,7 @@ RULES:
 - AVOID: "Dapatkan sekarang!", "Produk terbaik", "Harga terjangkau", any formal/stiff phrasing
 - USE: Casual slang, relatable observations, personal discovery tone
 - Scene 1 (Hook): Open with a natural line that does NOT sound like an ad — pattern interrupt
-- Last scene (CTA): End with a soft recommendation — platform CTA integrated naturally: ${ctaGuide.split('|')[0]}
+- Last scene (CTA): End with a soft recommendation — platform CTA integrated naturally: ${activeCTA.split('|')[0]}
 - Example tone Indonesia Scene 1 (Hook, short): "Eh ini serius nggak sih, gue baru tau ini..."
 - Example tone Indonesia Demo scene (longer, more detail): "Coba deh lihat teksturnya pas dioles, langsung nyerap nggak lengket sama sekali di kulit"
 - Example tone English Scene 1: "Okay wait, I was NOT expecting this..."
