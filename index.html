@@ -179,6 +179,10 @@ select option{background:#1a1a26;}
     </div>
     <div class="field"><label>Nama produk</label><input type="text" id="vp-name" placeholder="Auto-fill setelah analisis, atau isi manual"></div>
     <div class="field"><label>Deskripsi singkat</label><textarea id="vp-desc" placeholder="Auto-fill setelah analisis, atau isi manual"></textarea></div>
+    <div class="field" id="edu-topic-field" style="display:none;">
+      <label>Topik edukasi <span style="color:var(--success);font-size:11px;">(opsional jika ada produk)</span></label>
+      <input type="text" id="edu-topic" placeholder="cth: Manfaat vitamin C untuk kulit, Tips memilih skincare...">
+    </div>
     <div>
       <div class="slabel">Upload Talent (opsional)</div>
       <div class="upload-zone" id="vt-zone">
@@ -210,6 +214,7 @@ select option{background:#1a1a26;}
         <div class="pill" data-val="Testimonial">Testimonial</div>
         <div class="pill" data-val="Before After">Before/After</div>
         <div class="pill" data-val="POV Creator">POV Creator</div>
+        <div class="pill" data-val="Edukasi" style="border-color:rgba(74,222,128,.3);color:var(--success);">Edukasi</div>
       </div>
     </div>
     <div>
@@ -536,7 +541,16 @@ function makePills(groupId,cb){
     p.onclick=()=>{document.querySelectorAll('#'+groupId+' .pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');cb(p.dataset.val);};
   });
 }
-makePills('v-style',v=>{vStyle=v;});
+makePills('v-style',v=>{
+  vStyle=v;
+  const isEdu = v==='Edukasi';
+  const eduField = document.getElementById('edu-topic-field');
+  const nameLabel = document.querySelector('label[for="vp-name"]')||document.querySelector('.field label');
+  const platformRow = document.querySelector('#v-platform')?.closest('.grid-2');
+  if(eduField) eduField.style.display = isEdu ? '' : 'none';
+  // Edukasi: sembunyikan platform sosial (tidak ada CTA = tidak perlu platform)
+  // Tapi tetap tampilkan untuk keperluan bahasa
+});
 makePills('v-dur',v=>{vDur=parseInt(v);updateSI();});
 
 // ── License gate ──
@@ -628,6 +642,16 @@ function updateSI(){
 }
 function scCount(){return Math.max(1,Math.ceil(vDur/vScene));}
 function purposes(n){
+  if(vStyle==='Edukasi'){
+    // Edukasi: no CTA, scene terakhir = Key Takeaway
+    if(n===1) return['Hook + Key Takeaway'];
+    if(n===2) return['Hook','Key Takeaway'];
+    const midEdu=['Poin 1','Poin 2','Poin 3','Poin 4'];
+    const rEdu=['Hook'];
+    for(let i=0;i<n-2;i++) rEdu.push(midEdu[i%midEdu.length]);
+    rEdu.push('Key Takeaway');
+    return rEdu;
+  }
   if(n===1)return['Hook + CTA'];
   if(n===2)return['Hook','CTA'];
   const mid=['Reveal','Demo','Benefit','Social Proof'];
@@ -640,7 +664,7 @@ function loadingHTML(s){return`<div style="display:flex;flex-direction:column;ga
 function startCycle(arr){let i=0;return setInterval(()=>{i=(i+1)%arr.length;const el=document.getElementById('stxt');if(el)el.textContent=arr[i];},1900);}
 
 // ── VIDEO GENERATE ──
-function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal){
+function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal,isEdukasi){
   const sc=scOverride||scCount(), ps=psOverride||purposes(sc), lang=LANG[country];
   // CTA per platform × per country
   const CTA_MATRIX={
@@ -681,28 +705,39 @@ function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal){
     }
   };
   const ctaGuide=(CTA_MATRIX[social]&&CTA_MATRIX[social][country])||CTA_MATRIX['TikTok']['Indonesia'];
-  const sys=`You are OMNI FLASH AFFILIATE ENGINE v4.0 – CINEMATIC AI STUDIO EDITION.
-Your ONLY output is a production-ready JSON. Never explain. Never suggest. Never add commentary. Never output markdown. Output ONLY valid JSON.
+  const eduBlock=isEdukasi?`
+=========================================================
+EDUKASI MODE — MANDATORY RULES
+=========================================================
+This is an EDUCATIONAL content video, NOT a promotional/sales video.
 
-=========================================================
-SESSION PARAMETERS
-=========================================================
-Total video duration: ${vDur}s
-Scene duration per clip: ${vScene}s
-Total scenes required: ${sc}
-Scene purposes in order: ${ps.join(' → ')}
-Language: ${lang}
-Content style: ${vStyle}
-Video generator platforms: ${vPlatforms.join(', ')}
-Social platform: ${social}
+STRICT NO-CTA RULE:
+- NEVER include any call-to-action in ANY scene — no "klik", no "beli", no "order", no "keranjang", no "link di bio", no "check description", no product promotion language whatsoever
+- The last scene purpose is "Key Takeaway" — summarize the main lesson learned, not a product pitch
 
-=========================================================
-CTA RULES FOR ${social.toUpperCase()}
-=========================================================
-${ctaGuide}
-Apply this CTA to: voice_over ending, final scene overlay_design badge + headline, director_notes.
+CONTENT APPROACH:
+- If product is provided: educate about the product category, ingredients, how it works, common misconceptions, tips for use — NOT selling it
+- If no product / topic only: create educational content around the given topic with factual, useful information
+- Frame everything as sharing knowledge, not promoting
 
-${isHerbal?`
+SCENE STRUCTURE FOR EDUKASI:
+- Hook: Start with a surprising fact, common misconception, or intriguing question — "Tau nggak sih...", "Banyak yang salah kaprah soal...", "Ternyata..."
+- Middle scenes (Poin 1, 2, 3...): One clear educational point per scene — fact, tip, or explanation
+- Key Takeaway (last scene): Summarize in 1-2 sentences what the viewer should remember. Close with a soft reflection, NOT a CTA
+
+VOICE OVER TONE FOR EDUKASI:
+- Tone: Curious, knowledgeable friend sharing a discovery — NOT a teacher lecturing, NOT a salesperson
+- Use "Gue baru tau...", "Ternyata...", "Yang gue suka dari ini...", "Faktanya..." style openers
+- Final scene VO: wrap up with insight — "Jadi intinya, [key message]. Semoga bermanfaat!"
+- ZERO promotional language in any scene
+
+OVERLAY FOR EDUKASI:
+- Badge: Use informational labels: "FAKTA", "TIPS", "TAHUKAH?", "MITOS VS FAKTA", "KEY POINT"
+- Headline: State the educational point in max 4 words — factual, not promotional
+- Avoid superlatives or hype language in overlays
+`:'';
+
+  const herbalBlock=isHerbal?`
 =========================================================
 HERBAL / HEALTH PRODUCT PROTECTION — MANDATORY
 =========================================================
@@ -746,8 +781,32 @@ SAFETY CONCEPT BANK — pick the framing that best matches the marketing angle o
 
 Never use: "Produk ini bukan obat." as a standalone sentence. Always fuse it with genuine product sentiment.
 
-TONE GUIDANCE: Frame product benefits as lifestyle enhancement and natural support, NOT medical treatment. Use discovery and personal experience tone, not medical authority tone.
-`:''}
+
+`:'';
+
+  const sys=`You are OMNI FLASH AFFILIATE ENGINE v4.0 – CINEMATIC AI STUDIO EDITION.
+Your ONLY output is a production-ready JSON. Never explain. Never suggest. Never add commentary. Never output markdown. Output ONLY valid JSON.
+
+=========================================================
+SESSION PARAMETERS
+=========================================================
+Total video duration: ${vDur}s
+Scene duration per clip: ${vScene}s
+Total scenes required: ${sc}
+Scene purposes in order: ${ps.join(' → ')}
+Language: ${lang}
+Content style: ${vStyle}
+Video generator platforms: ${vPlatforms.join(', ')}
+Social platform: ${social}
+
+=========================================================
+CTA RULES FOR ${social.toUpperCase()}
+=========================================================
+${ctaGuide}
+Apply this CTA to: voice_over ending, final scene overlay_design badge + headline, director_notes.
+
+${eduBlock}
+${herbalBlock}
 
 =========================================================
 PRODUCT ANALYSIS — auto-detect from image/description
@@ -928,7 +987,8 @@ async function generateVideo(angleCount=1){
 
   const sc=scCount(), ps=purposes(sc), lang=LANG[country];
   const isHerbal=document.getElementById('herbal-mode')?.checked||false;
-  const sys=buildSystemPrompt(country,social,sc,ps,isHerbal);
+  const isEdukasi=vStyle==='Edukasi';
+  const sys=buildSystemPrompt(country,social,sc,ps,isHerbal,isEdukasi);
 
   const baseParts=[];
   if(b64store.vp) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vp.mime,data:b64store.vp.data}});
@@ -956,7 +1016,8 @@ Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison,
 MARKETING ANGLE — pick ONE, never repeat
 =========================================================
 Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use`, angleInstruction);
-    const parts=[...baseParts,{type:'text',text:`Product: ${name}\nDesc: ${desc||'see image'}\nTalent: ${talent||'auto'}\nCountry: ${country}\nStyle: ${vStyle}\n${sc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${requestedAngles[ai]||'auto'}\nGenerate complete JSON.`}];
+    const eduTopic=document.getElementById('edu-topic')?.value.trim()||'';
+    const parts=[...baseParts,{type:'text',text:`Product: ${name||'(no specific product)'}\nDesc: ${desc||'see image if provided'}\nTalent: ${talent||'auto'}\nCountry: ${country}\nStyle: ${vStyle}${eduTopic?'\nEdu Topic: '+eduTopic:''}\n${sc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${requestedAngles[ai]||'auto'}\nGenerate complete JSON.`}];
     // Each angle fetch is isolated — if it fails, return an error result instead of throwing,
     // so one failed angle never breaks the other angles in Promise.all
     try{
@@ -1261,7 +1322,8 @@ MARKETING ANGLE — LOCKED FOR THIS REQUEST
 =========================================================
 You MUST use the "${retryAngle}" angle. Do not use any other angle. Do not rotate.`;
     const isHerbal=document.getElementById('herbal-mode')?.checked||false;
-    const sys=buildSystemPrompt(country,social,retrySc,ps,isHerbal);
+    const isEdukasi=vStyle==='Edukasi';
+    const sys=buildSystemPrompt(country,social,retrySc,ps,isHerbal,isEdukasi);
     const sysFinal=sys.replace(`=========================================================
 MARKETING ANGLE — pick ONE, never repeat
 =========================================================
