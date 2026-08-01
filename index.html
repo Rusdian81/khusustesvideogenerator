@@ -183,7 +183,16 @@ select option{background:#1a1a26;}
       <label>Topik edukasi <span style="color:var(--success);font-size:11px;">(opsional jika ada produk)</span></label>
       <input type="text" id="edu-topic" placeholder="cth: Manfaat vitamin C untuk kulit, Tips memilih skincare...">
     </div>
-    <div>
+    <div class="field" id="crisis-type-field" style="display:none;">
+      <label>Jenis Krisis Pabrik <span style="color:var(--gold);font-size:11px;">(wajib untuk Factory Crisis)</span></label>
+      <select id="crisis-type">
+        <option value="overstock">Overstock — gudang penuh, stok harus keluar cepat</option>
+        <option value="bottleneck">Bottleneck Produksi — jalur produksi macet/menumpuk</option>
+        <option value="deadline">Deadline Darurat — distribusi harus keluar sebelum batas waktu</option>
+        <option value="machine">Gangguan Mesin — mesin bermasalah tapi produksi tetap jalan</option>
+      </select>
+    </div>
+    <div id="talent-block">
       <div class="slabel">Upload Talent (opsional)</div>
       <div class="upload-zone" id="vt-zone">
         <input type="file" id="vt-file" accept="image/*" onchange="handleUpload(event,'vt')">
@@ -204,6 +213,17 @@ select option{background:#1a1a26;}
           <select id="v-platform"><option>TikTok</option><option>Instagram Reels</option><option>YouTube Shorts</option><option>Shopee Video</option><option>General</option></select>
         </div>
       </div>
+      <div class="field">
+        <label>Gaya CTA</label>
+        <select id="v-cta-style">
+          <option value="standard">Standard — langsung ke action platform</option>
+          <option value="scarcity_stock">Scarcity Stok — "stoknya tinggal dikit"</option>
+          <option value="scarcity_time">Scarcity Waktu — "promo cuma sampe hari ini"</option>
+          <option value="social_proof">Social Proof — "udah ribuan yang order"</option>
+          <option value="fomo">FOMO — "yang udah coba nggak balik ke yang lain"</option>
+          <option value="soft_recommend">Soft Recommend — "worth banget buat dicoba"</option>
+        </select>
+      </div>
     </div>
     <div>
       <div class="slabel">Gaya Konten</div>
@@ -215,6 +235,7 @@ select option{background:#1a1a26;}
         <div class="pill" data-val="Before After">Before/After</div>
         <div class="pill" data-val="POV Creator">POV Creator</div>
         <div class="pill" data-val="Edukasi" style="border-color:rgba(74,222,128,.3);color:var(--success);">Edukasi</div>
+        <div class="pill" data-val="Factory Crisis" style="border-color:rgba(245,200,66,.35);color:var(--gold);">Factory Crisis</div>
       </div>
     </div>
     <div>
@@ -302,7 +323,9 @@ select option{background:#1a1a26;}
 </main>
 
 <script>
-const MODEL="gemini-2.5-flash";
+const MODEL="gemini-3.5-flash";
+// Fallback chain: kalau model utama lagi overload (503/429), coba model lain sebelum nyerah
+const MODEL_FALLBACKS=["gemini-3.5-flash","gemini-3.5-flash-lite","gemini-2.5-flash"];
 const b64store={vp:null,vt:null,ip:null,it:null};
 // JSON extraction helpers
 function extractJSON(raw){
@@ -350,38 +373,44 @@ function getKey(){
   if(!k){alert('Masukkan Gemini API Key dulu!');throw new Error('API key kosong');}
   return k;
 }
-function geminiAPI(key){
-  return`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
+function geminiAPI(key,model){
+  return`https://generativelanguage.googleapis.com/v1beta/models/${model||MODEL}:generateContent?key=${key}`;
 }
 
-// Fetch with auto-retry (same model, max 3 attempts)
-async function geminiWithRetry(key, body, maxRetries=3){
+// Fetch with auto-retry + auto-fallback across models (kalau satu model overload, coba model lain)
+async function geminiWithRetry(key, body, maxRetries=2){
   let lastErr=null;
-  for(let r=0;r<maxRetries;r++){
-    try{
-      const res=await fetch(geminiAPI(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      const data=await res.json();
-      if(data.error){
-        const status=data.error.status||'';
-        if(status==='UNAVAILABLE'||status==='RESOURCE_EXHAUSTED'||data.error.code===503||data.error.code===429){
-          lastErr=data.error.message;
-          const waitMs=(r+1)*3000;
-          const el=document.getElementById('stxt');
-          if(el) el.textContent=`Gemini sibuk, retry ${r+1}/${maxRetries}... tunggu ${waitMs/1000}s`;
-          await new Promise(ok=>setTimeout(ok,waitMs));
-          continue;
+  for(let m=0;m<MODEL_FALLBACKS.length;m++){
+    const model=MODEL_FALLBACKS[m];
+    for(let r=0;r<maxRetries;r++){
+      try{
+        const res=await fetch(geminiAPI(key,model),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const data=await res.json();
+        if(data.error){
+          const status=data.error.status||'';
+          if(status==='UNAVAILABLE'||status==='RESOURCE_EXHAUSTED'||data.error.code===503||data.error.code===429){
+            lastErr=data.error.message;
+            const waitMs=(r+1)*3000;
+            const el=document.getElementById('stxt');
+            if(el) el.textContent=`${model} sibuk, retry ${r+1}/${maxRetries}... tunggu ${waitMs/1000}s`;
+            await new Promise(ok=>setTimeout(ok,waitMs));
+            continue;
+          }
+          throw new Error('Gemini API Error: '+data.error.message+'\n\nStatus: '+data.error.status);
         }
-        throw new Error('Gemini API Error: '+data.error.message+'\n\nStatus: '+data.error.status);
+        if(r>0||m>0){const el=document.getElementById('stxt');if(el) el.textContent=`Berhasil pakai ${model}`+(r>0?' (retry '+(r+1)+')':'');}
+        return data;
+      }catch(err){
+        if(err.message.startsWith('Gemini API Error:')) throw err;
+        lastErr=err.message;
+        if(r<maxRetries-1) await new Promise(ok=>setTimeout(ok,2000));
       }
-      if(r>0){const el=document.getElementById('stxt');if(el) el.textContent='Berhasil setelah retry '+(r+1);}
-      return data;
-    }catch(err){
-      if(err.message.startsWith('Gemini API Error:')) throw err;
-      lastErr=err.message;
-      if(r<maxRetries-1) await new Promise(ok=>setTimeout(ok,2000));
     }
+    // Model ini abis dicoba maxRetries kali dan masih gagal -> pindah ke model fallback berikutnya
+    const el=document.getElementById('stxt');
+    if(el&&m<MODEL_FALLBACKS.length-1) el.textContent=`${model} masih sibuk, coba model lain: ${MODEL_FALLBACKS[m+1]}...`;
   }
-  throw new Error('Gemini sedang sibuk. Coba lagi dalam 1-2 menit.\n\nDetail: '+lastErr);
+  throw new Error('Semua model Gemini sedang sibuk (dicoba: '+MODEL_FALLBACKS.join(', ')+'). Coba lagi dalam 1-2 menit.\n\nDetail: '+lastErr);
 }
 
 // Build Gemini request body from system prompt + parts (text + optional images)
@@ -544,10 +573,14 @@ function makePills(groupId,cb){
 makePills('v-style',v=>{
   vStyle=v;
   const isEdu = v==='Edukasi';
+  const isFactory = v==='Factory Crisis';
   const eduField = document.getElementById('edu-topic-field');
-  const nameLabel = document.querySelector('label[for="vp-name"]')||document.querySelector('.field label');
-  const platformRow = document.querySelector('#v-platform')?.closest('.grid-2');
+  const crisisField = document.getElementById('crisis-type-field');
+  const talentBlock = document.getElementById('talent-block');
   if(eduField) eduField.style.display = isEdu ? '' : 'none';
+  if(crisisField) crisisField.style.display = isFactory ? '' : 'none';
+  // Factory Crisis: tidak ada talent — chaos berasal dari internal pabrik, bukan talent ngomong ke kamera
+  if(talentBlock) talentBlock.style.display = isFactory ? 'none' : '';
   // Edukasi: sembunyikan platform sosial (tidak ada CTA = tidak perlu platform)
   // Tapi tetap tampilkan untuk keperluan bahasa
 });
@@ -642,6 +675,16 @@ function updateSI(){
 }
 function scCount(){return Math.max(1,Math.ceil(vDur/vScene));}
 function purposes(n){
+  if(vStyle==='Factory Crisis'){
+    // Priority hierarchy (locked): Factory Validation (always #1) → Crisis Hook → Internal Pressure → QC Pass → Clearance Logic → CTA Loop (always last)
+    // Lower-priority middle items get dropped first when scene count is tight.
+    if(n===1) return['Factory Validation + Crisis Hook + CTA Loop'];
+    if(n===2) return['Factory Validation','Crisis Hook + CTA Loop'];
+    const midFactory=['Crisis Hook','Internal Pressure','QC Pass','Clearance Logic'];
+    const rFactory=['Factory Validation', ...midFactory.slice(0, n-2)];
+    rFactory.push('CTA Loop');
+    return rFactory;
+  }
   if(vStyle==='Edukasi'){
     // Edukasi: no CTA, scene terakhir = Key Takeaway
     if(n===1) return['Hook + Key Takeaway'];
@@ -664,7 +707,7 @@ function loadingHTML(s){return`<div style="display:flex;flex-direction:column;ga
 function startCycle(arr){let i=0;return setInterval(()=>{i=(i+1)%arr.length;const el=document.getElementById('stxt');if(el)el.textContent=arr[i];},1900);}
 
 // ── VIDEO GENERATE ──
-function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal,isEdukasi){
+function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType){
   const sc=scOverride||scCount(), ps=psOverride||purposes(sc), lang=LANG[country];
   // CTA per platform × per country
   const CTA_MATRIX={
@@ -709,6 +752,58 @@ function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal,isEduka
   const activeCTA=isEdukasi
     ? 'NO CTA — This is educational content. Do NOT mention any platform, cart, link, or call-to-action anywhere in this video.'
     : ctaGuide;
+  // Extract just the platform action verb (before first |) for clean VO embedding
+  const ctaAction=isEdukasi ? '' : ctaGuide.split('|')[0].trim();
+
+  // CTA Style DNA — Standard keeps platform action; all other styles remove it entirely
+  const ctaStyleMap={
+    standard: `STANDARD CTA: Direct and clear. State the platform action naturally at the end of the VO. Confident, not pushy.
+VO example ID: "Langsung aja ${ctaAction} ya, gue juga udah order ulang ini"
+VO example EN: "Just ${ctaAction} — honestly worth every penny"
+Overlay badge: use platform default (e.g. "Klik Keranjang Kuning!", "Link di Bio!")
+RULE: mention the platform action (${ctaAction}) in the VO ending.`,
+
+    scarcity_stock: `SCARCITY STOCK CTA: End the video with stock urgency ONLY. Do NOT mention the platform action, cart, link, or any platform UI element anywhere.
+VO example ID: "Stoknya tinggal 3pcs nih, buruan amanin sebelum kehabisan"
+VO example ID alt: "Gue hampir nggak kebagian kemarin — kalau mau, jangan tunda lagi"
+VO example EN: "Stock is almost gone — grab yours before it sells out"
+Overlay badge: "STOK TERBATAS" / "LIMITED STOCK"
+Overlay headline: max 4 words about scarcity (e.g. "Hampir Habis!", "Stok Tipis!")
+STRICT RULE: ZERO mention of keranjang, cart, link, bio, deskripsi, or any platform action. The VO ends with the scarcity message only.`,
+
+    scarcity_time: `SCARCITY TIME CTA: End the video with time urgency ONLY. Do NOT mention the platform action, cart, link, or any platform UI element anywhere.
+VO example ID: "Promonya cuma sampe malem ini doang, jangan sampe nyesel ya"
+VO example ID alt: "Flash sale-nya abis jam 12 malem — ini kesempatan terakhir"
+VO example EN: "This deal ends tonight — don't miss it"
+Overlay badge: "HARI INI AJA" / "TODAY ONLY"
+Overlay headline: max 4 words about time pressure (e.g. "Berakhir Hari Ini!", "Cuma Hari Ini!")
+STRICT RULE: ZERO mention of keranjang, cart, link, bio, deskripsi, or any platform action. The VO ends with the time urgency only.`,
+
+    social_proof: `SOCIAL PROOF CTA: End the video with crowd validation ONLY. Do NOT mention the platform action, cart, link, or any platform UI element anywhere.
+VO example ID: "Udah 2000an yang order bulan ini — wajar sih, ini emang beda banget"
+VO example ID alt: "Rating-nya 4.9 dari ribuan review, gue nggak heran sama sekali"
+VO example EN: "Over two thousand orders this month and I totally get why"
+Overlay badge: "TERLARIS" / "BESTSELLER"
+Overlay headline: max 4 words about social proof (e.g. "Ribuan Sudah Buktikan", "Top Seller!")
+STRICT RULE: ZERO mention of keranjang, cart, link, bio, deskripsi, or any platform action. The VO ends with the social proof signal only.`,
+
+    fomo: `FOMO CTA: End the video making the viewer feel they'll miss out ONLY. Do NOT mention the platform action, cart, link, or any platform UI element anywhere.
+VO example ID: "Yang udah nyoba ini pada nggak mau balik ke yang lain — serius, gue ngerti banget kenapa"
+VO example ID alt: "Kalau belum coba ini, kamu belum tau yang kamu lewatin"
+VO example EN: "Everyone who tries this never goes back — and honestly I get it"
+Overlay badge: "JANGAN NYESEL" / "DON'T MISS OUT"
+Overlay headline: max 4 words about FOMO (e.g. "Jangan Sampai Menyesal", "Yang Lain Udah Tau!")
+STRICT RULE: ZERO mention of keranjang, cart, link, bio, deskripsi, or any platform action. The VO ends with the FOMO message only.`,
+
+    soft_recommend: `SOFT RECOMMEND CTA: End the video with a genuine low-pressure recommendation ONLY. Do NOT mention the platform action, cart, link, or any platform UI element anywhere.
+VO example ID: "Kalau lagi penasaran sama produk kayak gini, ini worth banget buat dicoba sekali"
+VO example ID alt: "Gue nggak maksa, tapi kalau mau coba — menurutku bakal suka deh"
+VO example EN: "If you've been curious, honestly it's worth trying at least once"
+Overlay badge: "WORTH IT" / "COBAIN DULU"
+Overlay headline: max 4 words soft recommendation (e.g. "Worth Banget Dicoba", "Coba Dulu Aja!")
+STRICT RULE: ZERO mention of keranjang, cart, link, bio, deskripsi, or any platform action. The VO ends with the soft recommendation only.`
+  };
+  const ctaStyleDNA=ctaStyleMap[ctaStyleKey]||ctaStyleMap['standard'];
   const eduBlock=isEdukasi?`
 =========================================================
 EDUKASI MODE — MANDATORY RULES
@@ -788,6 +883,186 @@ Never use: "Produk ini bukan obat." as a standalone sentence. Always fuse it wit
 
 `:'';
 
+  const CRISIS_NARRATIVE={
+    overstock:'Overstock — gudang penuh sampai unit menumpuk di lorong, manajemen memutuskan buka jalur online darurat supaya produksi tidak berhenti total',
+    bottleneck:'Bottleneck produksi — satu titik di jalur produksi macet/menumpuk, unit numpuk di belakang mesin yang bermasalah, tim buru-buru cari solusi',
+    deadline:'Deadline darurat — batch harus keluar sebelum jam tutup sistem/gudang, tim kerja dipercepat, tekanan waktu terasa di setiap sudut pabrik',
+    machine:'Gangguan mesin — salah satu mesin di jalur produksi trouble tapi tim tetap paksa jalan manual, workers turun tangan langsung sambil mesin lain tetap menyala'
+  };
+  const crisisNarrative=CRISIS_NARRATIVE[crisisType]||CRISIS_NARRATIVE['overstock'];
+
+  const factoryCrisisBlock=isFactoryCrisis?`
+=========================================================
+FACTORY CRISIS MODE — MANDATORY RULES (OVERRIDES DEFAULT CINEMATIC DNA)
+=========================================================
+This is NOT a commercial/cinematic ad. This is simulated LEAKED INTERNAL FACTORY FOOTAGE — it must feel like it was recorded by someone inside the factory during a real operational crisis, not shot for marketing.
+
+CRISIS CONTEXT FOR THIS VIDEO: ${crisisNarrative}
+Product name must be mentioned explicitly in VO where natural (breaking-news style), e.g. "ribuan unit [NAMA PRODUK] menumpuk".
+
+VISUAL DNA — NON-NEGOTIABLE:
+- Visual must feel LEAKED/RAW — NOT cinematic, NOT an advertisement, NOT a polished commercial shot
+- POV = human eye level, like someone walking/recording inside the factory, not a mounted cinema rig
+- Chaos comes from INTERNAL FACTORY OPERATIONS — never from a talent/presenter speaking to camera
+- NO talent, no presenter, no person addressing the camera directly at any point
+- Conveyor belt is ALWAYS running, workers are ALWAYS active, machines are ALWAYS on
+- Product sits in HORIZONTAL position on the conveyor belt in every relevant scene
+- Workers should match Indonesian factory context (uniform, hairnet/cap, casual industrial PPE)
+- STRICTLY FORBIDDEN in the visual itself: phones, cameras, screens, app UI, or any on-screen recording device/overlay being shown as part of the scene (this is about what's depicted in-frame, not the TikTok overlay graphics defined in the JSON schema — those still apply normally)
+- Lighting: practical factory lighting (fluorescent, overhead industrial) — NOT premium/cinematic rim light, NOT studio lighting
+- Motion: handheld, natural micro-shake, slightly imperfect framing — NOT smooth dolly/orbit/gimbal-perfect movement
+
+SCENE PURPOSE DNA (Factory Crisis specific — replaces default Hook/Reveal/Demo/Benefit DNA):
+Factory Validation → Wide/mid shot proving the factory is real and actively producing at scale — machines running, product line full, workers visibly busy. Establishes trust before the crisis is revealed.
+Crisis Hook → The bottleneck/problem is shown directly — product piling up, line jammed, or workers reacting to a problem. This is the "breaking news" moment, must stop the scroll with visual chaos, not with a talent reaction.
+Internal Pressure → Management/supervisor reacting under pressure — radio chatter, hand signals, urgent walking, checking clipboards/tablets from a distance (not addressing camera). Tension visible in body language and pace, not dialogue to camera.
+QC Pass → Close-up of product being checked quickly by a worker's hands — confirms product is NOT defective, still safe/sellable despite the crisis. Fast, matter-of-fact, procedural.
+Clearance Logic → Wide shot of warehouse/storage overflowing with boxes — visual proof of why the crisis exists (no room left), reinforcing why stock must move out now.
+CTA Loop → Camera returns to the conveyor belt in motion, product still flowing — closes the "loop" while carrying the CTA (see CTA MERGE RULE below). This is always the final scene.
+Combined-purpose scenes (e.g. "Factory Validation + Crisis Hook + CTA Loop" for very short durations): blend the DNA of each listed purpose within the single scene's shorter runtime — prioritize Crisis Hook's visual chaos as the dominant beat, with Factory Validation as the opening 1-2s and CTA Loop as the closing beat.
+
+CAMERA MOVEMENT RULES — Factory Crisis (replaces default cinematic camera rules):
+- Handheld walk-through movement, natural imperfection, slight shake — like a phone/bodycam recording, not a rig
+- NEVER use: smooth dolly, orbit, luxury push-in, lens flare, gimbal-perfect stabilization
+- Use instead: quick whip toward the problem, rushed walking POV, sudden stop-and-look reactions, natural sway
+- Cuts feel observational and urgent, not choreographed — slightly rougher pacing than a normal commercial
+
+SOUND DESIGN — Factory Crisis (replaces default commercial sound design):
+- Ambient: constant factory hum, conveyor motor noise, machine clatter
+- Crisis beats: brief alarm/beep, radio static burst, urgent footsteps
+- NO trending TikTok sound, NO beat drop, NO uplifting music swell, NO CTA jingle — this must sound like it was NOT designed for social media
+
+VOICE OVER TONE — Factory Crisis (overrides default creator tone for this style only):
+- Delivery: BREAKING INTERNAL NEWS — spoken like someone urgently narrating what's happening right now inside the factory, not a lifestyle creator talking to a friend
+- Register: lisan/darurat, matter-of-fact, slightly rushed — not scripted-ad, not cheerful
+- Reference template feel (adapt per scene purpose, do NOT copy verbatim): "BREAKING NEWS dari dalam pabrik produksi. Saat ini terjadi gangguan serius di jalur produksi yang bikin ribuan unit [NAMA PRODUK] menumpuk. Mesin tetap jalan, tapi distribusi tidak bisa keluar normal."
+- Product is NOT damaged/defective — always reassure quality is intact despite the crisis
+- This is a clearance/emergency-release narrative, NOT a lifestyle testimonial — never use "gue udah pakai ini" / "aku suka banget" style personal review language
+
+CTA MERGE RULE (CTA Loop scene only):
+- The active CTA STYLE DNA below still applies in full — do NOT replace it
+- But wrap its delivery inside the breaking-news/clearance framing: start from the internal logic of the crisis (gudang penuh / harus keluar cepat / distribusi darurat), then land on the selected CTA style's specific urgency and closing action
+- Example flow: "...daripada [crisis reason] produksi berhenti, stok ini dikeluarkan lewat jalur online — [selected CTA style's specific hook/urgency line]"
+- Overlay badge/headline for this scene should use breaking-news/clearance language ("CLEARANCE DARURAT", "STOK KELUAR SEKARANG") fused with the CTA style's urgency, not generic sales badges like "VIRAL"/"TERBUKTI"
+
+OVERLAY BADGE WORDS — Factory Crisis (replaces default "VIRAL"/"TERBUKTI" style badges):
+Use breaking-news/internal-leak register instead: "BREAKING", "DARURAT", "INTERNAL LEAK", "REKAMAN PABRIK", "STOK TERBATAS", "CLEARANCE"
+
+BANNED IN THIS MODE:
+- No talent/presenter dialogue anywhere
+- No premium/cinematic/luxury visual language of any kind
+- No trending sound/beat drop/uplifting music
+- No lifestyle personal-review VO phrasing
+`:'';
+
+  // Factory Crisis needs its cinematic/commercial defaults swapped out — these variables
+  // let the shared template below stay style-agnostic while still being accurate per style.
+  const qualityLine=isFactoryCrisis
+    ? 'Quality: Raw realistic leaked internal footage — handheld, natural imperfection, NOT polished 8K commercial'
+    : 'Quality: Ultra realistic 8K';
+  const sceneDnaBlock=isFactoryCrisis
+    ? `(Use the SCENE PURPOSE DNA defined in the FACTORY CRISIS MODE section above — Factory Validation / Crisis Hook / Internal Pressure / QC Pass / Clearance Logic / CTA Loop. Do NOT use Hook/Reveal/Demo/Benefit/Social Proof DNA below, it does not apply to this style.)`
+    : `Hook → Pattern interrupt, extreme close-up or shocking visual, zero context drop, stops scroll
+Reveal → Hero product shot, dynamic movement, premium lighting
+Demo → Macro/extreme close-up of product in use, hands-on demonstration
+Benefit → Lifestyle visualization, transformation, emotional payoff
+Social Proof → Testimonial feel, reactions, before/after moment
+CTA → Hero push-in, luxury rim light, CTA overlay, call to action per platform rules above`;
+  const cameraMoveBlock=isFactoryCrisis
+    ? `(Use the CAMERA MOVEMENT RULES defined in the FACTORY CRISIS MODE section above — handheld, raw, observational. Do NOT use the dolly/orbit/luxury rules below, they do not apply to this style.)`
+    : `- Scene 1: Extreme macro push-in OR whip pan reveal OR speed ramp from black
+- Scene 2: Dolly reveal OR orbit around product OR hero tilt-up
+- Scene 3: 100mm macro with shallow DOF, slow creep forward
+- Scene 4: Dolly out OR parallax movement OR kinetic energy
+- Scene 5+: Hero push-in with lens flare OR final orbit`;
+  const overlayBadgeExamples=isFactoryCrisis
+    ? '"BREAKING", "DARURAT", "INTERNAL LEAK", "STOK TERBATAS", "CLEARANCE"'
+    : '"VIRAL", "TERBUKTI", "LIMITED", "WOW"';
+  const soundDesignBlock=isFactoryCrisis
+    ? `(Use the SOUND DESIGN rules defined in the FACTORY CRISIS MODE section above — factory ambience, alarm, radio static. Do NOT use the trending-sound/beat-drop rules below, they do not apply to this style.)`
+    : `- Scene 1: Trending sound hook / beat drop / viral audio cue
+- Scene 2: Satisfying product reveal sound (swoosh, pop, shine)
+- Scene 3: Tactile demo sound (texture, liquid, mechanism)
+- Scene 4: Uplifting music swell / emotional beat
+- Scene 5+: Climactic music peak + CTA jingle or notification sound`;
+  const editingStyleLabel=isFactoryCrisis?'Raw Internal Leak':'Premium Commercial';
+  const cutEveryLine=isFactoryCrisis?'1.5–3s (observational, urgent but not hype-cut)':'0.8–1.5s';
+  const qualityRuleNote=isFactoryCrisis
+    ? 'Every scene must feel like raw leaked internal footage — handheld, imperfect framing, NOT commercial polish, NOT cinematic.'
+    : 'Every scene must resemble a premium commercial shot — 8K, cinematic, lit perfectly.';
+  const voiceRuleNote=isFactoryCrisis
+    ? 'Must sound like urgent breaking internal news narrated from inside the factory — never like a lifestyle creator, never like a TV commercial.'
+    : 'Must sound like a genuine content creator, never like AI or a TV commercial.';
+  const toneLine=isFactoryCrisis
+    ? 'Tone: Breaking internal news, darurat, lisan — see FACTORY CRISIS MODE section above for full VO tone rules. Do NOT use the lifestyle-creator voice character/examples below.'
+    : 'Natural creator, conversational, everyday speech, native local style — sounds like a REAL PERSON talking to a friend, NEVER robotic, NEVER scripted';
+  const voiceCharacterBlock=isFactoryCrisis
+    ? `(Skip this — Factory Crisis uses the breaking-news VO tone defined in the FACTORY CRISIS MODE section above, not a personal voice character.)`
+    : `VOICE CHARACTER — pick ONE that matches the marketing angle and stick to it throughout:
+- Discovery voice: "gue literally baru tau ini..." / "okay I literally just found this..."
+- Skeptic-turned-believer: "awalnya gue ragu banget, tapi..." / "I was so skeptical at first but..."
+- Excited friend: "guys guys guys, dengerin dulu..." / "wait you NEED to hear this..."
+- Calm authority: "satu hal yang gue notice..." / "something I noticed after using this..."
+- Relatable struggler: "udah lama banget gue cari yang kayak gini..." / "I've been looking for something like this forever..."`;
+  const richExamplesBlock=isFactoryCrisis
+    ? `(Skip these examples — they are personal-review UGC language, which is BANNED in Factory Crisis mode. Use the breaking-news reference template in the FACTORY CRISIS MODE section above instead.)`
+    : `RICH EXAMPLES BY PURPOSE AND LANGUAGE:
+
+Indonesia Hook examples (pick energy that matches the angle):
+- "Eh, ini beneran deh — gue udah nyoba puluhan produk tapi yang ini beda banget rasanya"
+- "Okayy jadi gue tadi iseng coba ini dan... serius nggak nyangka hasilnya segini"
+- "Tau nggak, udah lama banget gue nyari yang kayak gini dan akhirnya nemu juga"
+- "Gue nggak bakal review kalau nggak beneran suka — dan ini salah satunya"
+
+Indonesia Demo examples:
+- "Coba lihat deh, pas gue aplikasikan langsung nyerap, nggak ada residu sama sekali"
+- "Teksturnya ringan banget, nggak lengket, dan baunya... enak banget sumpah"
+- "Yang gue suka, hasilnya kelihatan langsung — nggak perlu nunggu berminggu-minggu"
+
+Indonesia Benefit examples:
+- "Setelah pakai ini rutin, yang paling kerasa tuh... rasanya beda banget dari sebelumnya"
+- "Jujur ini yang bikin gue balik lagi beli, karena hasilnya konsisten dan beneran kerasa"
+
+Indonesia CTA examples (natural, not pushy):
+- "Kalau penasaran, gue kasih link-nya ya — worth banget buat dicoba"
+- "Buat yang mau coba, langsung aja — gue juga bakal repurchase ini"
+
+English Hook examples:
+- "Okay so I was NOT expecting this to actually work but here we are..."
+- "I've tried so many things and honestly this one caught me off guard"
+- "This is the kind of find that makes you want to tell everyone immediately"
+- "So I randomly tried this and... I genuinely can't stop thinking about it"
+
+English Demo examples:
+- "Look at how it just... melts right in. No residue, no heaviness, nothing"
+- "The texture is so lightweight and the scent? Actually amazing"
+- "You can literally see the difference as it works — that's the part that got me"
+
+English Benefit examples:
+- "After using this consistently the change is honestly noticeable — and I'm picky"
+- "This is why I keep coming back to it. It's just consistently good"
+
+Malaysia Hook examples:
+- "Eh serious tak, gue dah cuba macam-macam tapi yang ni memang lain sikit"
+- "Okay korang, jangan scroll dulu — kena tengok ni kejap"
+
+Singapore/Philippines English Hook examples:
+- "Okay lah so I was super skeptical at first but this really surprised me"
+- "Not gonna lie I almost didn't try this but I'm so glad I did"`;
+  const purposeAdjustmentBlock=isFactoryCrisis
+    ? `- Factory Validation → low-to-mid. Matter-of-fact establishing statement, not hype.
+- Crisis Hook → UPPER end. Needs to clearly explain what's going wrong, breaking-news pacing.
+- Internal Pressure → mid. Urgent but procedural, radio-chatter energy.
+- QC Pass → mid. Quick, reassuring, factual confirmation of quality.
+- Clearance Logic → mid-to-upper. Explains the warehouse logic clearly.
+- CTA Loop → mid. Breaking-news closing merged with the active CTA style's urgency (see CTA MERGE RULE above).`
+    : `- Hook → LOWER end. Short, punchy, stops scroll. VO competes with overlay — keep it tight.
+- Reveal → low-to-mid. Let the visual breathe. One punchy line of awe or curiosity.
+- Demo → UPPER end. Describe exactly what's happening visually — texture, sensation, result.
+- Benefit → UPPER end. Emotional payoff. Make them feel the transformation.
+- Social Proof → mid. Genuine, unscripted reaction. Like texting a friend about a find.
+- CTA → mid. Soft, natural. Never salesy. Platform action woven in casually.`;
+
   const sys=`You are OMNI FLASH AFFILIATE ENGINE v4.0 – CINEMATIC AI STUDIO EDITION.
 Your ONLY output is a production-ready JSON. Never explain. Never suggest. Never add commentary. Never output markdown. Output ONLY valid JSON.
 
@@ -804,13 +1079,28 @@ Video generator platforms: ${vPlatforms.join(', ')}
 Social platform: ${social}
 
 =========================================================
-CTA RULES FOR ${social.toUpperCase()}
+CTA RULES FOR FINAL SCENE — READ CAREFULLY
 =========================================================
-${activeCTA}
-Apply this CTA to: voice_over ending, final scene overlay_design badge + headline, director_notes.
+${ctaStyleKey === 'standard'
+  ? `ACTIVE STYLE: STANDARD
+Platform: ${social} | Country: ${activeCTA.split('|')[0]?.trim()||''}
+Badge color: ${activeCTA.split('|')[1]?.trim()||''}
+→ VO ending MUST mention the platform action: "${ctaAction}"
+→ Overlay badge: use platform default text (e.g. "Klik Keranjang Kuning!", "Link di Bio!")
+→ Headline: reference the platform action`
+  : `ACTIVE STYLE: ${ctaStyleKey.toUpperCase().replace('_',' ')}
+→ ZERO platform action in VO, badge, headline, or director_notes
+→ Do NOT say: "${ctaAction}", keranjang, cart, link di bio, deskripsi, or any platform UI element
+→ VO ending, badge, and headline come ENTIRELY from the CTA Style below`}
+
+=========================================================
+CTA STYLE DNA — FOLLOW THIS EXACTLY
+=========================================================
+${ctaStyleDNA}
 
 ${eduBlock}
 ${herbalBlock}
+${factoryCrisisBlock}
 
 =========================================================
 PRODUCT ANALYSIS — auto-detect from image/description
@@ -827,33 +1117,24 @@ STORYBOARD RULES — EXACTLY ${sc} scenes
 =========================================================
 - Every scene must be production-ready for: ${vPlatforms.join(', ')}
 - Aspect ratio: 9:16
-- Quality: Ultra realistic 8K
+- ${qualityLine}
 - NEVER use static shots — every scene must have camera movement
 - Every second must introduce a new visual element or camera movement
 - The first ${Math.min(2,vScene)}s of scene 1 must STOP SCROLLING immediately
-- Cut every 0.8–1.5s within each scene
+- Cut every ${cutEveryLine} within each scene
 - Product visibility minimum 40% across all scenes
 - Overlay must always be premium, colorful, highly readable, aesthetically pleasing
 - Headline text: MAXIMUM 4 WORDS
 - Caption: MAXIMUM 3 WORDS
 
 SCENE PURPOSE DNA (apply per scene slot):
-Hook → Pattern interrupt, extreme close-up or shocking visual, zero context drop, stops scroll
-Reveal → Hero product shot, dynamic movement, premium lighting
-Demo → Macro/extreme close-up of product in use, hands-on demonstration
-Benefit → Lifestyle visualization, transformation, emotional payoff
-Social Proof → Testimonial feel, reactions, before/after moment
-CTA → Hero push-in, luxury rim light, CTA overlay, call to action per platform rules above
+${sceneDnaBlock}
 
 CAMERA MOVEMENT RULES — never use static:
-- Scene 1: Extreme macro push-in OR whip pan reveal OR speed ramp from black
-- Scene 2: Dolly reveal OR orbit around product OR hero tilt-up
-- Scene 3: 100mm macro with shallow DOF, slow creep forward
-- Scene 4: Dolly out OR parallax movement OR kinetic energy
-- Scene 5+: Hero push-in with lens flare OR final orbit
+${cameraMoveBlock}
 
 OVERLAY DESIGN RULES per scene:
-- badge: short power word (e.g. "VIRAL", "TERBUKTI", "LIMITED", "WOW")  
+- badge: short power word (e.g. ${overlayBadgeExamples})  
 - headline: MAX 4 WORDS, bold, high contrast, with glow or shadow
 - keyword: gradient + glow, accent color auto-matched to brand
 - background_panel: glass_dark (hook) → glass_light (reveal) → rounded_dark (demo) → gradient_blue (benefit) → premium_glow (CTA)
@@ -867,7 +1148,7 @@ Use in sequence: Motion Blur → Whip Pan → Speed Ramp → Zoom Punch → Flas
 VOICE OVER RULES — CRITICAL — DYNAMIC WORD COUNT PER SCENE
 =========================================================
 Language: ${lang}
-Tone: Natural creator, conversational, everyday speech, native local style — sounds like a REAL PERSON talking to a friend, NEVER robotic, NEVER scripted
+Tone: ${toneLine}
 
 IMPORTANT: Generate the VO script directly inside EACH scene object as "voice_over_script" — not as a separate combined script.
 
@@ -876,38 +1157,36 @@ WORD COUNT IS DYNAMIC — calculated from THIS scene's duration (${vScene}s) AND
 BASE RANGE FOR ${vScene}s SCENES: ${Math.round(vScene*1.7)}–${Math.round(vScene*2.4)} words
 
 PURPOSE ADJUSTMENT (apply on top of base range, same scene duration ≠ same word count):
-- Hook → use the LOWER end of the range. Leave breathing room — visual pattern-interrupt needs space, VO must not compete with overlay text appearing on screen. Short, punchy, curiosity-driving.
-- Reveal → low-to-mid range. Let the visual hero shot breathe.
-- Demo → use the UPPER end of the range. Viewer is already engaged — VO can describe what's being shown in more detail.
-- Benefit → upper end of the range. Most room for emotional/value description.
-- Social Proof → mid range. Conversational, testimonial-style pacing.
-- CTA → mid range. Leave space for the platform CTA overlay (badge/cart icon) to be visually clear — don't cram the VO.
+${purposeAdjustmentBlock}
 
-RULES:
-- Each scene's VO must flow naturally if all scenes are read back-to-back as one continuous narrative
-- Use contractions and natural filler words appropriate to ${lang}
-- AVOID: "Dapatkan sekarang!", "Produk terbaik", "Harga terjangkau", any formal/stiff phrasing
-- USE: Casual slang, relatable observations, personal discovery tone
-- Scene 1 (Hook): Open with a natural line that does NOT sound like an ad — pattern interrupt
-- Last scene (CTA): End with a soft recommendation — platform CTA integrated naturally: ${activeCTA.split('|')[0]}
-- Example tone Indonesia Scene 1 (Hook, short): "Eh ini serius nggak sih, gue baru tau ini..."
-- Example tone Indonesia Demo scene (longer, more detail): "Coba deh lihat teksturnya pas dioles, langsung nyerap nggak lengket sama sekali di kulit"
-- Example tone English Scene 1: "Okay wait, I was NOT expecting this..."
+${voiceCharacterBlock}
+
+CRITICAL LANGUAGE RULES FOR EACH SCENE:
+- Use incomplete sentences, trailing off naturally: "...dan itu yang bikin gue..."
+- Use filler words naturally: "literally", "honestly", "serius deh", "kayaknya", "nggak nyangka"
+- Vary sentence rhythm — mix short punchy lines with longer flowing ones
+- NEVER start two scenes with the same opening word/phrase
+- Each scene VO must feel like a different MOMENT in one continuous conversation, not separate scripts
+- The whole video when read aloud should feel like one person telling a story
+
+BANNED PHRASES (these make VO sound like AI/ad):
+- "Produk ini...", "Temukan...", "Dapatkan...", "Kualitas terbaik"
+- "This product...", "Discover...", "Get yours...", "High quality"
+- Any sentence starting with the product name
+- Any sentence that sounds like it was written, not spoken
+
+${richExamplesBlock}
 
 =========================================================
 SOUND DESIGN RULES
 =========================================================
-- Scene 1: Trending sound hook / beat drop / viral audio cue
-- Scene 2: Satisfying product reveal sound (swoosh, pop, shine)
-- Scene 3: Tactile demo sound (texture, liquid, mechanism)
-- Scene 4: Uplifting music swell / emotional beat
-- Scene 5+: Climactic music peak + CTA jingle or notification sound
+${soundDesignBlock}
 
 =========================================================
 EDITING RULES
 =========================================================
-style: Premium Commercial
-cut_every: 0.8–1.5s
+style: ${editingStyleLabel}
+cut_every: ${cutEveryLine}
 transitions: Motion Blur, Whip Pan, Speed Ramp, Zoom Punch, Flash Cut
 text_priority: Maximum
 mobile_safe_zone: true
@@ -921,9 +1200,9 @@ camera_rule: Never use static shots. Every clip has intentional movement.
 overlay_rule: Overlay must always be premium, colorful, highly readable, and aesthetically pleasing.
 text_rule: Maximum four words per headline. Maximum three words per caption.
 hook_rule: First ${Math.min(2,vScene)}s must stop scrolling immediately — pattern interrupt, no slow intros.
-voice_rule: Must sound like a genuine content creator, never like AI or a TV commercial.
-quality_rule: Every scene must resemble a premium commercial shot — 8K, cinematic, lit perfectly.
-pacing_rule: Fast cuts every 0.8–1.5s. Energy must be high throughout. No dead air.
+voice_rule: ${voiceRuleNote}
+quality_rule: ${qualityRuleNote}
+pacing_rule: Cuts every ${cutEveryLine}. ${isFactoryCrisis?'Tense and urgent, but observational — not hype energy.':'Energy must be high throughout. No dead air.'}
 
 =========================================================
 OUTPUT STRUCTURE — return EXACTLY this JSON shape
@@ -992,11 +1271,15 @@ async function generateVideo(angleCount=1){
   const sc=scCount(), ps=purposes(sc), lang=LANG[country];
   const isHerbal=document.getElementById('herbal-mode')?.checked||false;
   const isEdukasi=vStyle==='Edukasi';
-  const sys=buildSystemPrompt(country,social,sc,ps,isHerbal,isEdukasi);
+  const isFactoryCrisis=vStyle==='Factory Crisis';
+  const crisisType=document.getElementById('crisis-type')?.value||'overstock';
+  const ctaStyleKey=document.getElementById('v-cta-style')?.value||'standard';
+  const sys=buildSystemPrompt(country,social,sc,ps,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType);
 
   const baseParts=[];
   if(b64store.vp) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vp.mime,data:b64store.vp.data}});
-  if(b64store.vt) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vt.mime,data:b64store.vt.data}});
+  // Factory Crisis tidak pakai talent — chaos berasal dari internal pabrik, bukan dari talent
+  if(b64store.vt && !isFactoryCrisis) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vt.mime,data:b64store.vt.data}});
 
   const vout=document.getElementById('v-out');
   vout.innerHTML=loadingHTML(angleCount>1?'Generating '+angleCount+' angles secara paralel...':'Menganalisis produk dan memilih marketing angle...');
@@ -1021,7 +1304,8 @@ MARKETING ANGLE — pick ONE, never repeat
 =========================================================
 Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use`, angleInstruction);
     const eduTopic=document.getElementById('edu-topic')?.value.trim()||'';
-    const parts=[...baseParts,{type:'text',text:`Product: ${name||'(no specific product)'}\nDesc: ${desc||'see image if provided'}\nTalent: ${talent||'auto'}\nCountry: ${country}\nStyle: ${vStyle}${eduTopic?'\nEdu Topic: '+eduTopic:''}\n${sc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${requestedAngles[ai]||'auto'}\nGenerate complete JSON.`}];
+    const crisisTypeLabel=document.getElementById('crisis-type')?.selectedOptions?.[0]?.textContent||'';
+    const parts=[...baseParts,{type:'text',text:`Product: ${name||'(no specific product)'}\nDesc: ${desc||'see image if provided'}\n${isFactoryCrisis?'':'Talent: '+(talent||'auto')+'\n'}Country: ${country}\nStyle: ${vStyle}${eduTopic?'\nEdu Topic: '+eduTopic:''}${isFactoryCrisis?'\nJenis Krisis: '+crisisTypeLabel:''}\n${sc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${requestedAngles[ai]||'auto'}\nGenerate complete JSON.`}];
     // Each angle fetch is isolated — if it fails, return an error result instead of throwing,
     // so one failed angle never breaks the other angles in Promise.all
     try{
@@ -1042,10 +1326,22 @@ Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison,
   }
 
   try{
-    // Run all angle fetches IN PARALLEL — each is isolated via try/catch above,
-    // so Promise.all here is now safe (no single failure cancels the rest)
-    const promises=Array.from({length:angleCount},(_,ai)=>fetchAngle(ai));
-    const results=await Promise.all(promises);
+    // Run angle fetches SEQUENTIALLY with delay to avoid Gemini 10 RPM rate limit
+    const results=[];
+    for(let ai=0;ai<angleCount;ai++){
+      if(ai>0){
+        const waitSec=7;
+        const el=document.getElementById('stxt');
+        for(let w=waitSec;w>0;w--){
+          if(el) el.textContent=`Angle ${ai+1}/${angleCount} — menunggu ${w}s (rate limit)...`;
+          await new Promise(ok=>setTimeout(ok,1000));
+        }
+      }
+      const el2=document.getElementById('stxt');
+      if(el2) el2.textContent=`Generating angle ${ai+1} dari ${angleCount}...`;
+      const result=await fetchAngle(ai);
+      results.push(result);
+    }
     clearInterval(timer);
     renderVideoResults(results,name,sc);
   }catch(err){clearInterval(timer);vout.innerHTML=errBox(err.message);}
@@ -1317,9 +1613,12 @@ async function retryFailedAngle(btn){
   container.innerHTML=loadingHTML('Mencoba ulang angle "'+retryAngle+'"...');
 
   try{
+    const isFactoryCrisis=vStyle==='Factory Crisis';
+    const crisisType=document.getElementById('crisis-type')?.value||'overstock';
+    const crisisTypeLabel=document.getElementById('crisis-type')?.selectedOptions?.[0]?.textContent||'';
     const baseParts=[];
     if(b64store.vp) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vp.mime,data:b64store.vp.data}});
-    if(b64store.vt) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vt.mime,data:b64store.vt.data}});
+    if(b64store.vt && !isFactoryCrisis) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vt.mime,data:b64store.vt.data}});
 
     const angleInstruction=`=========================================================
 MARKETING ANGLE — LOCKED FOR THIS REQUEST
@@ -1327,12 +1626,13 @@ MARKETING ANGLE — LOCKED FOR THIS REQUEST
 You MUST use the "${retryAngle}" angle. Do not use any other angle. Do not rotate.`;
     const isHerbal=document.getElementById('herbal-mode')?.checked||false;
     const isEdukasi=vStyle==='Edukasi';
-    const sys=buildSystemPrompt(country,social,retrySc,ps,isHerbal,isEdukasi);
+    const ctaStyleKey=document.getElementById('v-cta-style')?.value||'standard';
+    const sys=buildSystemPrompt(country,social,retrySc,ps,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType);
     const sysFinal=sys.replace(`=========================================================
 MARKETING ANGLE — pick ONE, never repeat
 =========================================================
 Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use`, angleInstruction);
-    const parts=[...baseParts,{type:'text',text:`Product: ${productName}\nDesc: ${productDesc||'see image'}\nTalent: ${talentDesc||'auto'}\nCountry: ${country}\nStyle: ${vStyle}\n${retrySc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${retryAngle}\nGenerate complete JSON.`}];
+    const parts=[...baseParts,{type:'text',text:`Product: ${productName}\nDesc: ${productDesc||'see image'}\n${isFactoryCrisis?'':'Talent: '+(talentDesc||'auto')+'\n'}Country: ${country}\nStyle: ${vStyle}${isFactoryCrisis?'\nJenis Krisis: '+crisisTypeLabel:''}\n${retrySc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${retryAngle}\nGenerate complete JSON.`}];
 
     const key=getKey();
     const body=buildGeminiBody(sysFinal,parts);
