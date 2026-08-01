@@ -116,6 +116,8 @@ select option{background:#1a1a26;}
 .ib-mj{background:rgba(245,200,66,.15);color:var(--gold);}
 .ib-flux{background:rgba(74,222,128,.15);color:var(--success);}
 .ib-neg{background:rgba(160,160,160,.15);color:var(--muted);}
+.ib-vo{background:rgba(252,92,125,.15);color:var(--accent2);}
+.ib-cam{background:rgba(124,92,252,.15);color:var(--accent);}
 .ptxt{padding:13px;font-family:'Space Mono',monospace;font-size:12px;line-height:1.8;color:#c0c0e0;white-space:pre-wrap;word-break:break-word;}
 .tab-panel{display:none;}
 .tab-panel.active{display:flex;width:100%;}
@@ -1444,9 +1446,9 @@ function renderVideoInner(parsed,raw,name,sc,container){
         const sceneKey=sceneKeysTop?sceneKeysTop[i]:stash(JSON.stringify(sc2,null,2));
         html+=`<div class="scene-p" id="${uid}-scp-${i}" style="${i>0?'display:none':''}">`;
         html+=`<div style="padding:8px 12px;display:flex;justify-content:flex-end;gap:6px;border-bottom:1px solid var(--border);">
-          <button class="btn-copy" data-copy-key="${sceneKey}">Copy Scene JSON</button>
+          <button class="btn-copy" data-copy-key="${sceneKey}">Copy Scene JSON (raw)</button>
         </div>`;
-        html+=`<div class="jcontent">${shl(JSON.stringify(sc2,null,2))}</div>`;
+        html+=`<div style="padding:10px 12px;">${sceneFieldBlocks(sc2)}</div>`;
         html+=`</div>`;
       });
       html+=`</div>`;
@@ -1592,7 +1594,49 @@ function renderImage(parsed,raw,name){
 }
 
 // ── Helpers ──
+// Flatten nested scene fields into clean, copy-paste-ready prompt strings
+function flattenVisualPrompt(vp){
+  if(!vp||typeof vp!=='object') return '';
+  return [vp.environment,vp.subject,vp.composition,vp.lighting,vp.camera_motion,vp.depth_of_field,vp.quality,vp.aspect_ratio?('aspect ratio '+vp.aspect_ratio):''].filter(Boolean).join(', ');
+}
+function flattenMotionPrompt(mp){
+  if(!mp||typeof mp!=='object') return '';
+  const bits=[];
+  if(mp.camera) bits.push('Camera: '+mp.camera);
+  if(mp.subject_motion) bits.push('Subject motion: '+mp.subject_motion);
+  if(mp.background_motion) bits.push('Background motion: '+mp.background_motion);
+  if(mp.transition) bits.push('Transition: '+mp.transition);
+  return bits.join('. ');
+}
+function flattenCamera(c){
+  if(!c||typeof c!=='object') return '';
+  return [c.movement,c.lens,c.speed].filter(Boolean).join(', ');
+}
+function flattenOverlay(o){
+  if(!o||typeof o!=='object') return '';
+  const bits=[];
+  if(o.badge?.text) bits.push('Badge: '+o.badge.text);
+  if(o.headline?.text) bits.push('Headline: '+o.headline.text);
+  if(o.keyword?.text) bits.push('Keyword: '+o.keyword.text);
+  return bits.join(' | ');
+}
 function jblock(label,content,isRaw){const k=stash(content);return`<div class="jblock"><div class="jblock-hdr"><span class="jblock-title">${h(label)}</span><button class="btn-copy" data-copy-key="${k}">Copy</button></div><div class="jcontent">${isRaw?h(content):shl(content)}</div></div>`;}
+// Renders one scene as separate, individually-copyable field blocks instead of one mixed JSON blob
+function sceneFieldBlocks(sc2){
+  let out='';
+  const field=(label,text,cls)=>{
+    if(!text) return;
+    const k=stash(text);
+    out+=`<div class="icard" style="margin-bottom:8px;"><div class="icard-hdr"><span class="ibadge ${cls||''}">${h(label)}</span><button class="btn-copy" data-copy-key="${k}">Copy</button></div><div class="ptxt">${h(text)}</div></div>`;
+  };
+  field('Voice Over Script',sc2.voice_over_script,'ib-vo');
+  field('Camera',flattenCamera(sc2.camera),'ib-cam');
+  field('Visual Prompt (Text-to-Image)',flattenVisualPrompt(sc2.visual_prompt),'ib-mj');
+  field('Motion Prompt (Image-to-Video)',flattenMotionPrompt(sc2.motion_prompt),'ib-flux');
+  field('Overlay Text',flattenOverlay(sc2.overlay_design),'ib-hero');
+  field('Caption',sc2.caption,'ib-life');
+  return out;
+}
 async function retryFailedAngle(btn){
   btn.disabled=true; btn.textContent='Mencoba lagi...';
   // Find this button's containing box (the angle's own container) so we only replace THAT box,
