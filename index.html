@@ -194,6 +194,10 @@ select option{background:#1a1a26;}
         <option value="machine">Gangguan Mesin — mesin bermasalah tapi produksi tetap jalan</option>
       </select>
     </div>
+    <div class="field" id="anomaly-enemy-field" style="display:none;">
+      <label>Musuh/Masalah Anomali <span style="color:var(--muted);font-size:11px;">(opsional — auto-detect dari produk jika kosong)</span></label>
+      <input type="text" id="anomaly-enemy" placeholder="cth: bakteri jahat, racun kimia, penuaan dini... (kosongkan untuk auto)">
+    </div>
     <div id="talent-block">
       <div class="slabel">Upload Talent (opsional)</div>
       <div class="upload-zone" id="vt-zone">
@@ -238,6 +242,7 @@ select option{background:#1a1a26;}
         <div class="pill" data-val="POV Creator">POV Creator</div>
         <div class="pill" data-val="Edukasi" style="border-color:rgba(74,222,128,.3);color:var(--success);">Edukasi</div>
         <div class="pill" data-val="Factory Crisis" style="border-color:rgba(245,200,66,.35);color:var(--gold);">Factory Crisis</div>
+        <div class="pill" data-val="Anomali Mascot" style="border-color:rgba(124,92,252,.35);color:#a78bfa;">🐾 Anomali Mascot</div>
       </div>
     </div>
     <div>
@@ -576,13 +581,16 @@ makePills('v-style',v=>{
   vStyle=v;
   const isEdu = v==='Edukasi';
   const isFactory = v==='Factory Crisis';
+  const isAnomaly = v==='Anomali Mascot';
   const eduField = document.getElementById('edu-topic-field');
   const crisisField = document.getElementById('crisis-type-field');
+  const anomalyField = document.getElementById('anomaly-enemy-field');
   const talentBlock = document.getElementById('talent-block');
   if(eduField) eduField.style.display = isEdu ? '' : 'none';
   if(crisisField) crisisField.style.display = isFactory ? '' : 'none';
-  // Factory Crisis: tidak ada talent — chaos berasal dari internal pabrik, bukan talent ngomong ke kamera
-  if(talentBlock) talentBlock.style.display = isFactory ? 'none' : '';
+  if(anomalyField) anomalyField.style.display = isAnomaly ? '' : 'none';
+  // Factory Crisis & Anomali Mascot: tidak ada talent — chaos dari pabrik internal / mascot creature yang jadi fokus visual
+  if(talentBlock) talentBlock.style.display = (isFactory||isAnomaly) ? 'none' : '';
   // Edukasi: sembunyikan platform sosial (tidak ada CTA = tidak perlu platform)
   // Tapi tetap tampilkan untuk keperluan bahasa
 });
@@ -687,6 +695,15 @@ function purposes(n){
     rFactory.push('CTA Loop');
     return rFactory;
   }
+  if(vStyle==='Anomali Mascot'){
+    // Priority hierarchy (locked): Anomaly Discovery (always #1) → Conflict Setup → Struggle Moment → Turning Point → Victory → Product Hero Shot + CTA (always last)
+    if(n===1) return['Anomaly Discovery + Conflict + Product Hero Shot + CTA'];
+    if(n===2) return['Anomaly Discovery + Conflict Setup','Turning Point + Product Hero Shot + CTA'];
+    const midAnomaly=['Conflict Setup','Struggle Moment','Turning Point','Victory'];
+    const rAnomaly=['Anomaly Discovery', ...midAnomaly.slice(0, n-2)];
+    rAnomaly.push('Product Hero Shot + CTA');
+    return rAnomaly;
+  }
   if(vStyle==='Edukasi'){
     // Edukasi: no CTA, scene terakhir = Key Takeaway
     if(n===1) return['Hook + Key Takeaway'];
@@ -709,7 +726,7 @@ function loadingHTML(s){return`<div style="display:flex;flex-direction:column;ga
 function startCycle(arr){let i=0;return setInterval(()=>{i=(i+1)%arr.length;const el=document.getElementById('stxt');if(el)el.textContent=arr[i];},1900);}
 
 // ── VIDEO GENERATE ──
-function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType){
+function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType,isAnomaly,anomalyEnemy){
   const sc=scOverride||scCount(), ps=psOverride||purposes(sc), lang=LANG[country];
   // CTA per platform × per country
   const CTA_MATRIX={
@@ -957,13 +974,83 @@ BANNED IN THIS MODE:
 - No lifestyle personal-review VO phrasing
 `:'';
 
-  // Factory Crisis needs its cinematic/commercial defaults swapped out — these variables
+  const anomalyBlock=isAnomaly?`
+=========================================================
+ANOMALI MASCOT MODE — MANDATORY RULES (OVERRIDES DEFAULT CINEMATIC DNA)
+=========================================================
+This is a 3D CGI MASCOT CREATURE video composited into REAL/PHOTOREAL environments (real skin, real product photography, real settings) — think Pixar/DreamWorks-style character work blended into live-action footage, NOT a fully animated cartoon.
+
+MASCOT CREATURE — GENERATE FROM PRODUCT:
+- Design an original, expressive, huggable 3D CGI creature that visually represents THIS product's category and core benefit (e.g. skincare → soft glowing dewy creature; herbal/wellness → creature with leaf/root/natural textures; energy/vitamin → bright spark-textured creature)
+- Creature must feel warm, likeable, slightly vulnerable (big expressive eyes, soft rounded shapes) — never scary or aggressive itself
+- Give the creature a consistent design across all scenes: same colors, same textures, same proportions — describe it fully in scene 1's visual_prompt and reference that exact description in every subsequent scene for consistency
+- Creature interacts physically with real environments (walks on real skin macro shots, stands next to real product packaging, reacts to real-world scale)
+${anomalyEnemy?`- THE ENEMY/THREAT for this video is specifically: ${anomalyEnemy}. Design the antagonist entity/entities around this concept.`:`- Auto-detect the enemy/threat from the product's core problem it solves (e.g. skincare → bacteria/free-radical creatures with spiky dark textures; herbal/wellness → toxin/fatigue entities; anti-aging → shadowy aging entities). Design an antagonist that visually represents this problem — spiky, dark-toned, contrasting sharply with the friendly mascot's soft warm design.`}
+- Enemy entities should look mischievous/threatening but still age-appropriate — sharp angular shapes, darker desaturated colors, contrast directly against the mascot's soft rounded warm design
+
+VISUAL DNA — NON-NEGOTIABLE:
+- Environment is PHOTOREAL — real skin texture (macro), real product photography, real physical settings. The CREATURE is the only 3D CGI element composited in.
+- Lighting must match between the CGI creature and the real environment — warm golden-hour glow for outdoor/lifestyle beats, clean bright studio light for product hero beats
+- Camera treats the creature as if it physically exists in the real scene — correct scale, correct shadow casting, correct depth
+- NEVER show the creature in a fully animated/cartoon world — the ground, skin, product, background must always read as real photography/footage
+- Creature's material/texture must be highly detailed 3D render quality — subsurface scattering on skin-like parts, glossy highlights, soft ambient occlusion
+
+SCENE PURPOSE DNA (Anomali Mascot specific — replaces default Hook/Reveal/Demo/Benefit DNA):
+Anomaly Discovery → The mascot creature is introduced in its environment (e.g. walking across real skin, standing near the product's use-context). Establish its personality and the world it lives in — curious, endearing, immediately likeable.
+Conflict Setup → The enemy/threat entities appear and begin causing visible trouble in the environment (e.g. small wounds/irritation on skin, signs of the product's core problem manifesting). Tension rises through visual storytelling, not dialogue.
+Struggle Moment → The mascot creature is overwhelmed, struggling, or reacting with visible distress against the enemy's effect — this is the emotional low point, make the viewer root for the creature.
+Turning Point → The real product appears and becomes the creature's source of power/protection — a glowing transformation, a shield effect, or the product visually empowering the creature (product must be shown clearly and realistically here).
+Victory → The enemy entities are pushed back/defeated/dispersed, the environment visibly improves (e.g. skin looks calm/healed), the mascot creature is triumphant and relieved.
+Product Hero Shot + CTA → Final hero composition: mascot creature posed happily beside/on the real product packaging, clean premium product photography energy, carries the CTA (see CTA MERGE RULE below). This is always the final scene.
+Combined-purpose scenes (e.g. "Anomaly Discovery + Conflict + Product Hero Shot + CTA" for very short durations): blend the DNA of each listed purpose within the single scene's shorter runtime — prioritize Conflict Setup and Turning Point as the dominant narrative beats, with Discovery as a fast opening beat and Product Hero Shot + CTA as the closing beat.
+
+CAMERA MOVEMENT RULES — Anomali Mascot (replaces default cinematic camera rules):
+- Macro/close-up moves that treat the creature at real physical scale within the real environment (e.g. slow push-in as if the camera is scaled to the creature's tiny size on skin)
+- Smooth cinematic movement is ALLOWED here (unlike Factory Crisis) — this is premium 3D character storytelling, not raw footage
+- Use: gentle dolly following the creature's movement, hero orbit on the product reveal, dramatic low-angle push-in during the Turning Point transformation beat
+- Victory and Product Hero Shot scenes can use premium slow-motion or a satisfying hero push-in
+
+SOUND DESIGN — Anomali Mascot (replaces default commercial sound design):
+- Anomaly Discovery: whimsical, curious sound design — light chimes, gentle ambient
+- Conflict Setup/Struggle Moment: tension builds — soft dramatic strings or low ominous tone, small distress sound cues from the creature (non-verbal, cute)
+- Turning Point: magical transformation sound — shimmer, power-up swell
+- Victory: triumphant, warm musical resolution
+- Product Hero Shot + CTA: satisfying product sound (swoosh/shine) layered under an uplifting musical close
+
+VOICE OVER TONE — Anomali Mascot (overrides default creator tone for this style only):
+- Delivery: warm narrative storyteller — like narrating a beloved short film, not a salesperson and not a UGC creator talking about themselves
+- Register: gentle, story-driven, builds empathy for the creature, resolves with warmth and reassurance
+- The VO narrates the STORY (creature's journey) while naturally weaving in the product's real benefit at the Turning Point and Victory beats
+- Avoid first-person "gue udah pakai ini" UGC language — this is third-person storytelling about the creature's world, not a personal testimonial
+- Reference feel (adapt per scene purpose, do NOT copy verbatim): "Di balik kulit yang keliatan baik-baik aja ini, ada perjuangan kecil yang nggak keliatan. Si [creature] harus hadapi [enemy] setiap hari..."
+
+CTA MERGE RULE (Product Hero Shot + CTA scene only):
+- The active CTA STYLE DNA below still applies in full — do NOT replace it
+- Wrap its delivery inside the story's resolution: the narrator closes the creature's journey, then naturally transitions into the selected CTA style's specific urgency and closing action
+- Example flow: "...dan sekarang si [creature] nggak sendirian lagi ngelawan [enemy] — [product] jadi partner barunya. [selected CTA style's specific hook/urgency line]"
+- Overlay badge/headline for this scene should fuse story-resolution language ("PELINDUNG BARU", "MISI SELESAI") with the CTA style's urgency, not generic sales badges like "VIRAL"/"TERBUKTI"
+
+OVERLAY BADGE WORDS — Anomali Mascot (replaces default "VIRAL"/"TERBUKTI" style badges):
+Use story/character register instead: "TERNYATA...", "MISI DIMULAI", "PELINDUNG BARU", "AKHIRNYA MENANG", "KEKUATAN BARU"
+
+BANNED IN THIS MODE:
+- No fully cartoon/animated backgrounds — environment must always be photoreal
+- No talent/presenter dialogue anywhere — this is a mascot/creature story, not a UGC review
+- No scary/gory violence in the conflict — keep it family-friendly, expressive, emotionally engaging not frightening
+- No generic "product review" VO phrasing — always storyteller narration
+`:'';
+
+  // Factory Crisis / Anomali Mascot need their cinematic/commercial defaults swapped out — these variables
   // let the shared template below stay style-agnostic while still being accurate per style.
   const qualityLine=isFactoryCrisis
     ? 'Quality: Raw realistic leaked internal footage — handheld, natural imperfection, NOT polished 8K commercial'
+    : isAnomaly
+    ? 'Quality: Ultra realistic 8K photoreal environment with premium 3D CGI character render composited in — Pixar/DreamWorks character quality'
     : 'Quality: Ultra realistic 8K';
   const sceneDnaBlock=isFactoryCrisis
     ? `(Use the SCENE PURPOSE DNA defined in the FACTORY CRISIS MODE section above — Factory Validation / Crisis Hook / Internal Pressure / QC Pass / Clearance Logic / CTA Loop. Do NOT use Hook/Reveal/Demo/Benefit/Social Proof DNA below, it does not apply to this style.)`
+    : isAnomaly
+    ? `(Use the SCENE PURPOSE DNA defined in the ANOMALI MASCOT MODE section above — Anomaly Discovery / Conflict Setup / Struggle Moment / Turning Point / Victory / Product Hero Shot + CTA. Do NOT use Hook/Reveal/Demo/Benefit/Social Proof DNA below, it does not apply to this style.)`
     : `Hook → Pattern interrupt, extreme close-up or shocking visual, zero context drop, stops scroll
 Reveal → Hero product shot, dynamic movement, premium lighting
 Demo → Macro/extreme close-up of product in use, hands-on demonstration
@@ -972,6 +1059,8 @@ Social Proof → Testimonial feel, reactions, before/after moment
 CTA → Hero push-in, luxury rim light, CTA overlay, call to action per platform rules above`;
   const cameraMoveBlock=isFactoryCrisis
     ? `(Use the CAMERA MOVEMENT RULES defined in the FACTORY CRISIS MODE section above — handheld, raw, observational. Do NOT use the dolly/orbit/luxury rules below, they do not apply to this style.)`
+    : isAnomaly
+    ? `(Use the CAMERA MOVEMENT RULES defined in the ANOMALI MASCOT MODE section above — scale-aware macro movement, smooth cinematic character storytelling. Do NOT use the generic dolly/orbit rules below, they do not apply to this style.)`
     : `- Scene 1: Extreme macro push-in OR whip pan reveal OR speed ramp from black
 - Scene 2: Dolly reveal OR orbit around product OR hero tilt-up
 - Scene 3: 100mm macro with shallow DOF, slow creep forward
@@ -979,27 +1068,39 @@ CTA → Hero push-in, luxury rim light, CTA overlay, call to action per platform
 - Scene 5+: Hero push-in with lens flare OR final orbit`;
   const overlayBadgeExamples=isFactoryCrisis
     ? '"BREAKING", "DARURAT", "INTERNAL LEAK", "STOK TERBATAS", "CLEARANCE"'
+    : isAnomaly
+    ? '"TERNYATA...", "MISI DIMULAI", "PELINDUNG BARU", "AKHIRNYA MENANG"'
     : '"VIRAL", "TERBUKTI", "LIMITED", "WOW"';
   const soundDesignBlock=isFactoryCrisis
     ? `(Use the SOUND DESIGN rules defined in the FACTORY CRISIS MODE section above — factory ambience, alarm, radio static. Do NOT use the trending-sound/beat-drop rules below, they do not apply to this style.)`
+    : isAnomaly
+    ? `(Use the SOUND DESIGN rules defined in the ANOMALI MASCOT MODE section above — whimsical/tension/triumphant story-driven sound. Do NOT use the trending-sound/beat-drop rules below, they do not apply to this style.)`
     : `- Scene 1: Trending sound hook / beat drop / viral audio cue
 - Scene 2: Satisfying product reveal sound (swoosh, pop, shine)
 - Scene 3: Tactile demo sound (texture, liquid, mechanism)
 - Scene 4: Uplifting music swell / emotional beat
 - Scene 5+: Climactic music peak + CTA jingle or notification sound`;
-  const editingStyleLabel=isFactoryCrisis?'Raw Internal Leak':'Premium Commercial';
-  const cutEveryLine=isFactoryCrisis?'1.5–3s (observational, urgent but not hype-cut)':'0.8–1.5s';
+  const editingStyleLabel=isFactoryCrisis?'Raw Internal Leak':isAnomaly?'Premium 3D Character Storytelling':'Premium Commercial';
+  const cutEveryLine=isFactoryCrisis?'1.5–3s (observational, urgent but not hype-cut)':isAnomaly?'1.2–2.5s (story pacing, let character moments breathe)':'0.8–1.5s';
   const qualityRuleNote=isFactoryCrisis
     ? 'Every scene must feel like raw leaked internal footage — handheld, imperfect framing, NOT commercial polish, NOT cinematic.'
+    : isAnomaly
+    ? 'Every scene must blend photoreal environment with premium 3D CGI character quality — consistent creature design, correct scale/lighting/shadow integration.'
     : 'Every scene must resemble a premium commercial shot — 8K, cinematic, lit perfectly.';
   const voiceRuleNote=isFactoryCrisis
     ? 'Must sound like urgent breaking internal news narrated from inside the factory — never like a lifestyle creator, never like a TV commercial.'
+    : isAnomaly
+    ? 'Must sound like a warm third-person storyteller narrating the mascot creature\'s journey — never first-person UGC review, never a salesperson.'
     : 'Must sound like a genuine content creator, never like AI or a TV commercial.';
   const toneLine=isFactoryCrisis
     ? 'Tone: Breaking internal news, darurat, lisan — see FACTORY CRISIS MODE section above for full VO tone rules. Do NOT use the lifestyle-creator voice character/examples below.'
+    : isAnomaly
+    ? 'Tone: Warm narrative storyteller — see ANOMALI MASCOT MODE section above for full VO tone rules. Do NOT use the lifestyle-creator voice character/examples below.'
     : 'Natural creator, conversational, everyday speech, native local style — sounds like a REAL PERSON talking to a friend, NEVER robotic, NEVER scripted';
   const voiceCharacterBlock=isFactoryCrisis
     ? `(Skip this — Factory Crisis uses the breaking-news VO tone defined in the FACTORY CRISIS MODE section above, not a personal voice character.)`
+    : isAnomaly
+    ? `(Skip this — Anomali Mascot uses the third-person storyteller VO tone defined in the ANOMALI MASCOT MODE section above, not a personal voice character.)`
     : `VOICE CHARACTER — pick ONE that matches the marketing angle and stick to it throughout:
 - Discovery voice: "gue literally baru tau ini..." / "okay I literally just found this..."
 - Skeptic-turned-believer: "awalnya gue ragu banget, tapi..." / "I was so skeptical at first but..."
@@ -1008,6 +1109,8 @@ CTA → Hero push-in, luxury rim light, CTA overlay, call to action per platform
 - Relatable struggler: "udah lama banget gue cari yang kayak gini..." / "I've been looking for something like this forever..."`;
   const richExamplesBlock=isFactoryCrisis
     ? `(Skip these examples — they are personal-review UGC language, which is BANNED in Factory Crisis mode. Use the breaking-news reference template in the FACTORY CRISIS MODE section above instead.)`
+    : isAnomaly
+    ? `(Skip these examples — they are personal-review UGC language, which is BANNED in Anomali Mascot mode. Use the storyteller reference template in the ANOMALI MASCOT MODE section above instead.)`
     : `RICH EXAMPLES BY PURPOSE AND LANGUAGE:
 
 Indonesia Hook examples (pick energy that matches the angle):
@@ -1058,6 +1161,13 @@ Singapore/Philippines English Hook examples:
 - QC Pass → mid. Quick, reassuring, factual confirmation of quality.
 - Clearance Logic → mid-to-upper. Explains the warehouse logic clearly.
 - CTA Loop → mid. Breaking-news closing merged with the active CTA style's urgency (see CTA MERGE RULE above).`
+    : isAnomaly
+    ? `- Anomaly Discovery → low-to-mid. Gentle, curious introduction — let the creature's personality land.
+- Conflict Setup → mid-to-upper. Building tension, explain what threat is emerging.
+- Struggle Moment → UPPER end. Emotional peak of distress — needs enough words to land the empathy beat.
+- Turning Point → UPPER end. The transformation moment — describe the product's empowering effect vividly.
+- Victory → mid. Warm, relieved, triumphant resolution.
+- Product Hero Shot + CTA → mid. Story closing merged with the active CTA style's urgency (see CTA MERGE RULE above).`
     : `- Hook → LOWER end. Short, punchy, stops scroll. VO competes with overlay — keep it tight.
 - Reveal → low-to-mid. Let the visual breathe. One punchy line of awe or curiosity.
 - Demo → UPPER end. Describe exactly what's happening visually — texture, sensation, result.
@@ -1103,6 +1213,7 @@ ${ctaStyleDNA}
 ${eduBlock}
 ${herbalBlock}
 ${factoryCrisisBlock}
+${anomalyBlock}
 
 =========================================================
 PRODUCT ANALYSIS — auto-detect from image/description
@@ -1204,7 +1315,7 @@ text_rule: Maximum four words per headline. Maximum three words per caption.
 hook_rule: First ${Math.min(2,vScene)}s must stop scrolling immediately — pattern interrupt, no slow intros.
 voice_rule: ${voiceRuleNote}
 quality_rule: ${qualityRuleNote}
-pacing_rule: Cuts every ${cutEveryLine}. ${isFactoryCrisis?'Tense and urgent, but observational — not hype energy.':'Energy must be high throughout. No dead air.'}
+pacing_rule: Cuts every ${cutEveryLine}. ${isFactoryCrisis?'Tense and urgent, but observational — not hype energy.':isAnomaly?'Story-paced — let emotional character beats breathe, do not rush the transformation moment.':'Energy must be high throughout. No dead air.'}
 
 =========================================================
 OUTPUT STRUCTURE — return EXACTLY this JSON shape
@@ -1274,14 +1385,16 @@ async function generateVideo(angleCount=1){
   const isHerbal=document.getElementById('herbal-mode')?.checked||false;
   const isEdukasi=vStyle==='Edukasi';
   const isFactoryCrisis=vStyle==='Factory Crisis';
+  const isAnomaly=vStyle==='Anomali Mascot';
   const crisisType=document.getElementById('crisis-type')?.value||'overstock';
+  const anomalyEnemy=document.getElementById('anomaly-enemy')?.value.trim()||'';
   const ctaStyleKey=document.getElementById('v-cta-style')?.value||'standard';
-  const sys=buildSystemPrompt(country,social,sc,ps,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType);
+  const sys=buildSystemPrompt(country,social,sc,ps,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType,isAnomaly,anomalyEnemy);
 
   const baseParts=[];
   if(b64store.vp) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vp.mime,data:b64store.vp.data}});
-  // Factory Crisis tidak pakai talent — chaos berasal dari internal pabrik, bukan dari talent
-  if(b64store.vt && !isFactoryCrisis) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vt.mime,data:b64store.vt.data}});
+  // Factory Crisis & Anomali Mascot tidak pakai talent — chaos dari pabrik internal / fokus visual ke creature
+  if(b64store.vt && !isFactoryCrisis && !isAnomaly) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vt.mime,data:b64store.vt.data}});
 
   const vout=document.getElementById('v-out');
   vout.innerHTML=loadingHTML(angleCount>1?'Generating '+angleCount+' angles secara paralel...':'Menganalisis produk dan memilih marketing angle...');
@@ -1307,7 +1420,7 @@ MARKETING ANGLE — pick ONE, never repeat
 Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use`, angleInstruction);
     const eduTopic=document.getElementById('edu-topic')?.value.trim()||'';
     const crisisTypeLabel=document.getElementById('crisis-type')?.selectedOptions?.[0]?.textContent||'';
-    const parts=[...baseParts,{type:'text',text:`Product: ${name||'(no specific product)'}\nDesc: ${desc||'see image if provided'}\n${isFactoryCrisis?'':'Talent: '+(talent||'auto')+'\n'}Country: ${country}\nStyle: ${vStyle}${eduTopic?'\nEdu Topic: '+eduTopic:''}${isFactoryCrisis?'\nJenis Krisis: '+crisisTypeLabel:''}\n${sc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${requestedAngles[ai]||'auto'}\nGenerate complete JSON.`}];
+    const parts=[...baseParts,{type:'text',text:`Product: ${name||'(no specific product)'}\nDesc: ${desc||'see image if provided'}\n${(isFactoryCrisis||isAnomaly)?'':'Talent: '+(talent||'auto')+'\n'}Country: ${country}\nStyle: ${vStyle}${eduTopic?'\nEdu Topic: '+eduTopic:''}${isFactoryCrisis?'\nJenis Krisis: '+crisisTypeLabel:''}${isAnomaly?'\nMusuh/Masalah Anomali: '+(anomalyEnemy||'(auto-detect dari produk)'):''}\n${sc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${requestedAngles[ai]||'auto'}\nGenerate complete JSON.`}];
     // Each angle fetch is isolated — if it fails, return an error result instead of throwing,
     // so one failed angle never breaks the other angles in Promise.all
     try{
@@ -1658,11 +1771,13 @@ async function retryFailedAngle(btn){
 
   try{
     const isFactoryCrisis=vStyle==='Factory Crisis';
+    const isAnomaly=vStyle==='Anomali Mascot';
     const crisisType=document.getElementById('crisis-type')?.value||'overstock';
     const crisisTypeLabel=document.getElementById('crisis-type')?.selectedOptions?.[0]?.textContent||'';
+    const anomalyEnemy=document.getElementById('anomaly-enemy')?.value.trim()||'';
     const baseParts=[];
     if(b64store.vp) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vp.mime,data:b64store.vp.data}});
-    if(b64store.vt && !isFactoryCrisis) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vt.mime,data:b64store.vt.data}});
+    if(b64store.vt && !isFactoryCrisis && !isAnomaly) baseParts.push({type:'image',source:{type:'base64',media_type:b64store.vt.mime,data:b64store.vt.data}});
 
     const angleInstruction=`=========================================================
 MARKETING ANGLE — LOCKED FOR THIS REQUEST
@@ -1671,12 +1786,12 @@ You MUST use the "${retryAngle}" angle. Do not use any other angle. Do not rotat
     const isHerbal=document.getElementById('herbal-mode')?.checked||false;
     const isEdukasi=vStyle==='Edukasi';
     const ctaStyleKey=document.getElementById('v-cta-style')?.value||'standard';
-    const sys=buildSystemPrompt(country,social,retrySc,ps,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType);
+    const sys=buildSystemPrompt(country,social,retrySc,ps,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType,isAnomaly,anomalyEnemy);
     const sysFinal=sys.replace(`=========================================================
 MARKETING ANGLE — pick ONE, never repeat
 =========================================================
 Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use`, angleInstruction);
-    const parts=[...baseParts,{type:'text',text:`Product: ${productName}\nDesc: ${productDesc||'see image'}\n${isFactoryCrisis?'':'Talent: '+(talentDesc||'auto')+'\n'}Country: ${country}\nStyle: ${vStyle}${isFactoryCrisis?'\nJenis Krisis: '+crisisTypeLabel:''}\n${retrySc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${retryAngle}\nGenerate complete JSON.`}];
+    const parts=[...baseParts,{type:'text',text:`Product: ${productName}\nDesc: ${productDesc||'see image'}\n${(isFactoryCrisis||isAnomaly)?'':'Talent: '+(talentDesc||'auto')+'\n'}Country: ${country}\nStyle: ${vStyle}${isFactoryCrisis?'\nJenis Krisis: '+crisisTypeLabel:''}${isAnomaly?'\nMusuh/Masalah Anomali: '+(anomalyEnemy||'(auto-detect dari produk)'):''}\n${retrySc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${retryAngle}\nGenerate complete JSON.`}];
 
     const key=getKey();
     const body=buildGeminiBody(sysFinal,parts);
