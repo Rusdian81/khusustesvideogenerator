@@ -238,6 +238,13 @@ select option{background:#1a1a26;}
         <div class="pill" data-val="POV Creator">POV Creator</div>
         <div class="pill" data-val="Edukasi" style="border-color:rgba(74,222,128,.3);color:var(--success);">Edukasi</div>
         <div class="pill" data-val="Factory Crisis" style="border-color:rgba(245,200,66,.35);color:var(--gold);">Factory Crisis</div>
+        <div class="pill" data-val="Hand Only">Hand Only</div>
+        <div class="pill" data-val="B-Roll">B-Roll</div>
+        <div class="pill" data-val="Unboxing">Unboxing</div>
+        <div class="pill" data-val="Skit">Skit</div>
+        <div class="pill" data-val="Green Screen">Green Screen</div>
+        <div class="pill" data-val="Split Screen">Split Screen</div>
+        <div class="pill" data-val="Text Story">Text Story</div>
       </div>
     </div>
     <div>
@@ -576,13 +583,15 @@ makePills('v-style',v=>{
   vStyle=v;
   const isEdu = v==='Edukasi';
   const isFactory = v==='Factory Crisis';
+  const isTextStory = v==='Text Story';
   const eduField = document.getElementById('edu-topic-field');
   const crisisField = document.getElementById('crisis-type-field');
   const talentBlock = document.getElementById('talent-block');
   if(eduField) eduField.style.display = isEdu ? '' : 'none';
   if(crisisField) crisisField.style.display = isFactory ? '' : 'none';
   // Factory Crisis: tidak ada talent — chaos berasal dari internal pabrik, bukan talent ngomong ke kamera
-  if(talentBlock) talentBlock.style.display = isFactory ? 'none' : '';
+  // Text Story: tidak ada talent — visual berupa screen recording chat/text, bukan live-action orang
+  if(talentBlock) talentBlock.style.display = (isFactory||isTextStory) ? 'none' : '';
   // Edukasi: sembunyikan platform sosial (tidak ada CTA = tidak perlu platform)
   // Tapi tetap tampilkan untuk keperluan bahasa
 });
@@ -757,7 +766,9 @@ function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal,isEduka
   // Extract just the platform action verb (before first |) for clean VO embedding
   const ctaAction=isEdukasi ? '' : ctaGuide.split('|')[0].trim();
 
-  // CTA Style DNA — Standard keeps platform action; all other styles remove it entirely
+  // CTA Style DNA — HYBRID: TikTok-compliant value framing throughout the VO body,
+  // but the FINAL sentence always lands on an explicit platform action to lift CTR.
+  // Standard style keeps the platform action as the entire close (no separate framing needed).
   const ctaStyleMap={
     standard: `STANDARD CTA: Direct and clear. State the platform action naturally at the end of the VO. Confident, not pushy.
 VO example ID: "Langsung aja ${ctaAction} ya, gue juga udah order ulang ini"
@@ -765,49 +776,54 @@ VO example EN: "Just ${ctaAction} — honestly worth every penny"
 Overlay badge: use platform default (e.g. "Klik Keranjang Kuning!", "Link di Bio!")
 RULE: mention the platform action (${ctaAction}) in the VO ending.`,
 
-    value_anchor: `VALUE ANCHOR CTA: TikTok-compliant. End the video by anchoring on the value/benefit the viewer GETS — not what they'll miss. No urgency, no scarcity, no time pressure. Just honest value framing.
-BANNED: "stok tinggal", "habis", "malam ini", "jangan sampai nyesel", "buruan", "terbatas", countdown language
-VO example ID: "Untuk harga segini, manfaat yang gue dapet jauh banget melebihi ekspektasi gue"
-VO example ID alt: "Ini yang bikin gue nggak ragu buat repurchase — nilainya emang worth it banget"
-VO example EN: "For what you get out of this, the value is genuinely hard to beat"
-Overlay badge: "WORTH IT" / "VALUE TERBAIK"
+    value_anchor: `VALUE ANCHOR CTA (HYBRID): TikTok-compliant value framing throughout the VO BODY, then land on an explicit platform action in the FINAL sentence to keep CTR high.
+Body of the close: anchor on the value/benefit the viewer GETS — not what they'll miss. No urgency, no scarcity, no time pressure in the framing itself.
+BANNED IN THE FRAMING PORTION: "stok tinggal", "habis", "malam ini", "jangan sampai nyesel", "buruan", "terbatas", countdown language
+VO example ID: "Untuk harga segini, manfaat yang gue dapet jauh banget melebihi ekspektasi gue — makanya ${ctaAction} ya"
+VO example ID alt: "Ini yang bikin gue nggak ragu buat repurchase, nilainya emang worth it banget. Kalau mau coba juga, ${ctaAction}"
+VO example EN: "For what you get out of this, the value is genuinely hard to beat — so go ahead and ${ctaAction}"
+Overlay badge: "WORTH IT" / "VALUE TERBAIK" as the primary badge
 Overlay headline: max 4 words on value (e.g. "Nilai Yang Nyata", "Manfaat Terbukti!")
-STRICT RULE: ZERO fake urgency or false scarcity. Value-only framing. Compliant with TikTok 2026 policy.`,
+HYBRID RULE: The VO body must stay 100% value-framed and TikTok-compliant (no fake urgency/scarcity). The FINAL sentence must naturally attach the explicit platform action "${ctaAction}" so the viewer gets one clear instruction to act — this combination keeps the video compliant while still lifting CTR.`,
 
-    community_pull: `COMMUNITY PULL CTA: TikTok-compliant. End with genuine community/social momentum — not fabricated numbers, not fake urgency. Frame as joining something real that people love.
-BANNED: "stok tinggal", "habis", "malam ini", "buruan", "terbatas", countdown, false inventory claims
-VO example ID: "Banyak banget yang udah coba ini dan gue ngerti kenapa mereka balik lagi beli"
-VO example ID alt: "Komunitasnya udah buktiin — dan gue sekarang ngerti kenapa ini jadi favorit banyak orang"
-VO example EN: "So many people keep coming back to this and I completely understand why now"
-Overlay badge: "FAVORIT KOMUNITAS" / "COMMUNITY FAV"
+    community_pull: `COMMUNITY PULL CTA (HYBRID): TikTok-compliant community/social momentum framing throughout the VO BODY, then land on an explicit platform action in the FINAL sentence.
+Body of the close: genuine community pull — not fabricated numbers, not fake urgency. Frame as joining something real that people love.
+BANNED IN THE FRAMING PORTION: "stok tinggal", "habis", "malam ini", "buruan", "terbatas", countdown, false inventory claims
+VO example ID: "Banyak banget yang udah coba ini dan gue ngerti kenapa mereka balik lagi beli — makanya ${ctaAction} deh"
+VO example ID alt: "Komunitasnya udah buktiin, dan gue sekarang ngerti kenapa ini jadi favorit banyak orang. Kalau penasaran, ${ctaAction}"
+VO example EN: "So many people keep coming back to this and I completely understand why now — go ahead and ${ctaAction}"
+Overlay badge: "FAVORIT KOMUNITAS" / "COMMUNITY FAV" as the primary badge
 Overlay headline: max 4 words (e.g. "Banyak Yang Suka", "Pilihan Favorit!")
-STRICT RULE: Only use verifiable/plausible community signals. No fabricated numbers. Compliant with TikTok 2026 policy.`,
+HYBRID RULE: The VO body must stay 100% community-framed and TikTok-compliant (only plausible, non-fabricated signals). The FINAL sentence must naturally attach the explicit platform action "${ctaAction}" so the viewer gets one clear instruction to act — this combination keeps the video compliant while still lifting CTR.`,
 
-    social_proof: `SOCIAL PROOF CTA: TikTok-compliant. End with authentic review/rating signals — only use plausible, non-fabricated claims.
-BANNED: exact fake numbers ("10.000 pembeli"), countdown, scarcity, time pressure
-VO example ID: "Rating-nya konsisten tinggi dari banyak yang udah review — dan gue setuju sama mereka"
-VO example ID alt: "Review-nya beneran bagus dan gue ngerti kenapa, setelah gue coba sendiri"
-VO example EN: "The reviews speak for themselves — and after trying it myself I completely agree"
-Overlay badge: "TERPERCAYA" / "TOP RATED"
+    social_proof: `SOCIAL PROOF CTA (HYBRID): TikTok-compliant authentic review/rating framing throughout the VO BODY, then land on an explicit platform action in the FINAL sentence.
+Body of the close: authentic review/rating signals — only plausible, non-fabricated claims.
+BANNED IN THE FRAMING PORTION: exact fake numbers ("10.000 pembeli"), countdown, scarcity, time pressure
+VO example ID: "Rating-nya konsisten tinggi dari banyak yang udah review, dan gue setuju sama mereka — ${ctaAction} aja"
+VO example ID alt: "Review-nya beneran bagus dan gue ngerti kenapa, setelah gue coba sendiri. Buat yang penasaran, ${ctaAction}"
+VO example EN: "The reviews speak for themselves — and after trying it myself I completely agree, so ${ctaAction}"
+Overlay badge: "TERPERCAYA" / "TOP RATED" as the primary badge
 Overlay headline: max 4 words (e.g. "Review Berbicara", "Terbukti Disukai!")
-STRICT RULE: Social proof only — no fake urgency, no fabricated inventory. Compliant with TikTok 2026 policy.`,
+HYBRID RULE: The VO body must stay 100% social-proof-framed and TikTok-compliant (no fake urgency, no fabricated inventory). The FINAL sentence must naturally attach the explicit platform action "${ctaAction}" so the viewer gets one clear instruction to act — this combination keeps the video compliant while still lifting CTR.`,
 
-    discovery: `DISCOVERY CTA: TikTok-compliant. Frame the end as personal discovery — viewer feels they just found something genuinely good, not pressured to buy. Curiosity-driven, zero pressure.
-BANNED: "stok tinggal", "habis", "malam ini", "buruan", "terbatas", any urgency/scarcity
-VO example ID: "Gue nggak nyangka bakal nemu yang kayak gini — dan seneng banget udah coba"
-VO example ID alt: "Ini jenis temuan yang bikin gue mau ceritain ke semua orang yang gue kenal"
-VO example EN: "This is the kind of find that makes you want to tell everyone about it"
-Overlay badge: "TEMUAN BARU" / "GREAT FIND"
+    discovery: `DISCOVERY CTA (HYBRID): TikTok-compliant personal-discovery framing throughout the VO BODY, then land on an explicit platform action in the FINAL sentence.
+Body of the close: personal discovery — viewer feels they just found something genuinely good, not pressured to buy. Curiosity-driven, zero pressure.
+BANNED IN THE FRAMING PORTION: "stok tinggal", "habis", "malam ini", "buruan", "terbatas", any urgency/scarcity
+VO example ID: "Gue nggak nyangka bakal nemu yang kayak gini, dan seneng banget udah coba — makanya ${ctaAction} ya"
+VO example ID alt: "Ini jenis temuan yang bikin gue mau ceritain ke semua orang yang gue kenal. Kalau mau tau lebih, ${ctaAction}"
+VO example EN: "This is the kind of find that makes you want to tell everyone about it — so ${ctaAction}"
+Overlay badge: "TEMUAN BARU" / "GREAT FIND" as the primary badge
 Overlay headline: max 4 words (e.g. "Temuan Yang Menarik", "Patut Dicoba!")
-STRICT RULE: Discovery framing only — no urgency, no pressure. Compliant with TikTok 2026 policy.`,
+HYBRID RULE: The VO body must stay 100% discovery-framed and TikTok-compliant (no urgency, no pressure). The FINAL sentence must naturally attach the explicit platform action "${ctaAction}" so the viewer gets one clear instruction to act — this combination keeps the video compliant while still lifting CTR.`,
 
-    soft_recommend: `SOFT RECOMMEND CTA: End the video with a genuine low-pressure recommendation ONLY. Do NOT mention the platform action, cart, link, or any platform UI element anywhere.
-VO example ID: "Kalau lagi penasaran sama produk kayak gini, ini worth banget buat dicoba sekali"
-VO example ID alt: "Gue nggak maksa, tapi kalau mau coba — menurutku bakal suka deh"
-VO example EN: "If you've been curious, honestly it's worth trying at least once"
-Overlay badge: "WORTH IT" / "COBAIN DULU"
+    soft_recommend: `SOFT RECOMMEND CTA (HYBRID): Genuine low-pressure recommendation framing throughout the VO BODY, then land on an explicit platform action in the FINAL sentence.
+Body of the close: soft, first-person recommendation — never salesy, never pushy.
+VO example ID: "Kalau lagi penasaran sama produk kayak gini, ini worth banget buat dicoba sekali — ${ctaAction} aja"
+VO example ID alt: "Gue nggak maksa, tapi kalau mau coba, menurutku bakal suka deh. Tinggal ${ctaAction}"
+VO example EN: "If you've been curious, honestly it's worth trying at least once — just ${ctaAction}"
+Overlay badge: "WORTH IT" / "COBAIN DULU" as the primary badge
 Overlay headline: max 4 words soft recommendation (e.g. "Worth Banget Dicoba", "Coba Dulu Aja!")
-STRICT RULE: ZERO mention of keranjang, cart, link, bio, deskripsi, or any platform action. The VO ends with the soft recommendation only.`
+HYBRID RULE: The VO body must stay 100% soft/low-pressure in tone. The FINAL sentence must naturally attach the explicit platform action "${ctaAction}" so the viewer gets one clear instruction to act — this combination keeps the tone gentle while still lifting CTR.`
   };
   const ctaStyleDNA=ctaStyleMap[ctaStyleKey]||ctaStyleMap['standard'];
   const eduBlock=isEdukasi?`
@@ -961,6 +977,138 @@ BANNED IN THIS MODE:
 - No lifestyle personal-review VO phrasing
 `:'';
 
+  // ── STYLE VARIANT DNA ──────────────────────────────────────────────
+  // These 7 styles ADD guidance on top of the standard Hook/Reveal/Demo/Benefit/Social Proof/CTA
+  // scene structure and the standard JSON output schema. Unlike Factory Crisis/Edukasi, they do
+  // NOT override the scene-purpose structure or the JSON shape — they only steer HOW each scene
+  // looks/sounds/is shot within that same structure.
+  const STYLE_VARIANT_MAP={
+    'Hand Only': `
+=========================================================
+HAND ONLY STYLE — ADDITIVE VISUAL GUIDANCE
+=========================================================
+This style shows ONLY hands interacting with the product — NEVER a face, NEVER a full body, NEVER anyone speaking to camera.
+
+VISUAL RULES:
+- Every scene frames hands only — macro/close-up shots of fingers, palms, product texture, application, unboxing motion
+- If a talent reference is provided, use it ONLY to inform skin tone/hand appearance — the face must NEVER appear in any scene
+- Product must be the hero within the hand's grip/interaction — satisfying, tactile, ASMR-adjacent motion (opening cap, pouring, applying, pressing, unwrapping)
+- Lighting: soft, clean, close-focus — often top-down or 45-degree macro angle on a clean surface or against skin
+- Camera: slow, steady macro movement — subtle push-in or gentle pan following the hand's motion, shallow depth of field emphasizing texture
+
+VOICE OVER: narrated off-camera (first-person, as if the viewer's own hands are being described) — VO still follows the standard tone/word-count rules, just never references "wajah gue" or face-based reactions.
+
+OVERLAY: keep overlay minimal and clean so it doesn't compete with the tactile hand visuals — favor small badge + short headline over heavy graphic treatment.
+`,
+
+    'B-Roll': `
+=========================================================
+B-ROLL / AESTHETIC MONTAGE STYLE — ADDITIVE VISUAL GUIDANCE
+=========================================================
+This style is a visual-first aesthetic montage — think satisfying, beautifully shot lifestyle/product footage cut together, NOT a talking-head or narrative-driven video.
+
+VISUAL RULES:
+- Every scene is a standalone aesthetically pleasing shot — product in beautiful light, ambient lifestyle context, textures, environment details
+- No talent speaking to camera required — if talent appears, they are shown in ambient lifestyle motion (walking, using product naturally), never addressing the lens
+- Prioritize composition, color grading, and mood over demonstration — this should feel like a mini aesthetic film, not a review
+- Camera: smooth cinematic movement — slow pans, gentle push-ins, rack focus, elegant parallax — every shot should feel intentional and gallery-worthy
+- Lighting: golden hour warmth, soft diffused window light, or clean bright minimal light depending on product category
+
+VOICE OVER: sparse and poetic — fewer words than standard, let the visuals breathe. VO here should lean toward the LOWER end of the dynamic word-count range regardless of scene purpose, favoring mood-setting phrases over detailed description.
+
+OVERLAY: minimal, elegant typography — favor understated badges/keywords over bold loud graphics, matching the aesthetic-first tone.
+`,
+
+    'Unboxing': `
+=========================================================
+UNBOXING STYLE — ADDITIVE VISUAL GUIDANCE
+=========================================================
+This style follows the authentic journey of receiving and opening a package — curiosity and anticipation are the emotional engine.
+
+VISUAL RULES:
+- Hook → package arrival (doorstep, hands picking up the box, curiosity-building close-up of the packaging)
+- Reveal → the act of opening (cutting tape, lifting the flap, first glimpse of what's inside)
+- Demo → taking the product out, first physical interaction, inspecting details/packaging design
+- Benefit → first impression reaction — quality feel, unexpected details, "wow" details revealed
+- CTA → product fully displayed with packaging, natural close urging others to experience the same unboxing moment
+- Hands and product are the primary visual focus — talent's face may appear briefly for reaction shots but is not required
+
+VOICE OVER: anticipation-driven — genuine curiosity and real-time reaction language ("okay let's see what's inside...", "oke buka nih...", "eh ternyata...")
+
+OVERLAY: use unboxing-appropriate badges like "UNBOXING TIME", "APA ISINYA?", "FIRST LOOK" instead of generic viral badges.
+`,
+
+    'Skit': `
+=========================================================
+SKIT / SITUATIONAL STYLE — ADDITIVE VISUAL GUIDANCE
+=========================================================
+This style is a short relatable mini-drama — a situational scenario (2 people, or 1 person + implied off-screen counterpart) that leads naturally into the product as the solution.
+
+VISUAL RULES:
+- Frame as a mini scene/sketch — everyday relatable situation (at home, at work, hanging out with a friend) where a problem naturally arises
+- If only one talent reference is provided, imply a second casual counterpart (friend/roommate/coworker) through dialogue and reaction shots — the second person can be off-screen voice or briefly shown
+- Comedic timing and relatable exaggeration are welcome — this should feel like entertainment first, ad second
+- Camera: multi-angle coverage like a real skit — reaction shots, over-the-shoulder framing, natural blocking between the two "characters"
+
+VOICE OVER FORMAT: voice_over_script for skit scenes may contain SHORT DIALOGUE EXCHANGES between two implied speakers, formatted naturally within the string (e.g. "A: Eh lo kenapa sih dari tadi garuk-garuk? / B: Nih gatel banget, coba deh pake ini..."). Keep exchanges brief — this still respects the same dynamic word-count range per scene, just split across two voices instead of one narrator.
+
+OVERLAY: badges can lean into the comedic/relatable angle — "RELATABLE BANGET", "POV KAMU JUGA?", "TERNYATA SOLUSINYA GAMPANG"
+`,
+
+    'Green Screen': `
+=========================================================
+GREEN SCREEN EXPLAINER STYLE — ADDITIVE VISUAL GUIDANCE
+=========================================================
+This style shows the talent standing in front of a digital/graphic backdrop (green-screen composite), walking the viewer through product info like a knowledgeable explainer/presenter — think TikTok "let me explain" format with data/visuals appearing behind them.
+
+VISUAL RULES:
+- Talent is framed center or slightly off-center, addressing camera directly, with a composited background showing relevant graphics: product images, bullet points, before/after visuals, comparison charts, or the product's actual environment
+- Background content should visually match what the talent is currently explaining in that scene's VO
+- Talent gestures naturally toward the background elements as if pointing something out — hand gestures matter here
+- Lighting: clean, bright, presenter-style — even front lighting so the green-screen composite reads naturally
+
+VOICE OVER: explainer/presenter tone — clear, confident, walks the viewer through information point by point, slightly more informative/structured than typical UGC but still conversational, not scripted-corporate.
+
+OVERLAY: can include data-style graphic elements (checkmarks, arrows pointing to background content, small text callouts) in addition to the standard badge/headline/keyword structure.
+`,
+
+    'Split Screen': `
+=========================================================
+SPLIT SCREEN COMPARE STYLE — ADDITIVE VISUAL GUIDANCE
+=========================================================
+This style shows TWO panels simultaneously within the same frame — typically left = problem/before/competitor, right = solution/after/this product — shown AT THE SAME TIME, not sequentially like standard Before/After.
+
+VISUAL RULES:
+- For scenes using this comparison, describe the composition explicitly in visual_prompt.composition as "split-screen: left panel shows [X], right panel shows [Y]" so it's clear both halves are simultaneous
+- Left panel: the problem, the inferior alternative, the "before" state, or a competitor-style generic approach (never name real competitor brands)
+- Right panel: this product's solution, the "after" state, the superior result — visually brighter/more appealing than the left panel
+- Not every scene needs to be split — use split-screen primarily for the comparison-heavy purposes (e.g. Reveal, Demo, Benefit); Hook and CTA can be full-frame for impact
+- Camera: each panel can have its own subtle independent motion, but keep both panels' pacing synchronized so cuts feel intentional
+
+VOICE OVER: comparative language — "di satu sisi... tapi di sisi lain...", "yang ini ribet, yang ini enggak..." — VO should clearly narrate the contrast between the two panels when a split-screen scene is active.
+
+OVERLAY: can include a small "VS" badge or divider graphic between panels, labels like "SEBELUM / SESUDAH" or "CARA LAMA / CARA BARU" positioned per panel.
+`,
+
+    'Text Story': `
+=========================================================
+TEXT STORY STYLE — ADDITIVE VISUAL GUIDANCE
+=========================================================
+This style simulates a phone-screen recording of a text conversation or storytelling app (chat bubbles, notes app, or narrated text-on-screen) revealing a relatable story that leads into the product — very common storytelling format in Indonesian TikTok.
+
+VISUAL RULES:
+- Visual environment is a PHONE SCREEN RECORDING — describe visual_prompt.environment as a messaging app / notes app / text-story interface (chat bubbles appearing sequentially, typing indicators, notification-style reveals)
+- No live-action talent footage required — the "camera" is the phone screen itself; if talent is referenced, they may appear only briefly as a small camera-in-camera reaction bubble (optional), never as the main visual
+- Text bubbles/messages should appear progressively across the scene's duration, timed to match the VO narration pace
+- Background behind the phone UI can be a blurred ambient real-life setting (bedroom, cafe, commute) to keep it feeling authentic and native to the platform
+
+VOICE OVER: narrates the story as if reading the messages aloud / narrating "what happened" — first-person storytelling tone: "jadi ceritanya gini...", "terus dia bales...", "sampai akhirnya..."
+
+OVERLAY: overlay design in this style is largely the chat/text UI itself — keep the standard badge/keyword elements minimal and positioned so they don't collide with the simulated chat bubbles (e.g. badge only in the corner, not covering message text).
+`
+  };
+  const styleVariantBlock = STYLE_VARIANT_MAP[vStyle] || '';
+
   // Factory Crisis needs its cinematic/commercial defaults swapped out — these variables
   // let the shared template below stay style-agnostic while still being accurate per style.
   const qualityLine=isFactoryCrisis
@@ -1094,10 +1242,12 @@ Badge color: ${activeCTA.split('|')[1]?.trim()||''}
 → VO ending MUST mention the platform action: "${ctaAction}"
 → Overlay badge: use platform default text (e.g. "Klik Keranjang Kuning!", "Link di Bio!")
 → Headline: reference the platform action`
-  : `ACTIVE STYLE: ${ctaStyleKey.toUpperCase().replace('_',' ')}
-→ ZERO platform action in VO, badge, headline, or director_notes
-→ Do NOT say: "${ctaAction}", keranjang, cart, link di bio, deskripsi, or any platform UI element
-→ VO ending, badge, and headline come ENTIRELY from the CTA Style below`}
+  : `ACTIVE STYLE: ${ctaStyleKey.toUpperCase().replace('_',' ')} (HYBRID)
+→ VO body: build using the compliant framing defined below (value / community / social proof / discovery / soft recommend) — no fake urgency/scarcity in this portion
+→ VO final sentence: MUST naturally attach the explicit platform action "${ctaAction}" right after the compliant close — this is what drives CTR, do not skip it
+→ Overlay badge: use the compliant style's badge as primary (e.g. "WORTH IT", "TERPERCAYA")
+→ Headline: reference the compliant style's value angle, not the raw platform action
+→ This hybrid approach is intentional: compliant narrative throughout + one clear explicit action cue at the very end`}
 
 =========================================================
 CTA STYLE DNA — FOLLOW THIS EXACTLY
@@ -1107,6 +1257,7 @@ ${ctaStyleDNA}
 ${eduBlock}
 ${herbalBlock}
 ${factoryCrisisBlock}
+${styleVariantBlock}
 
 =========================================================
 PRODUCT ANALYSIS — auto-detect from image/description
