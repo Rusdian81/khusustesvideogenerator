@@ -1377,6 +1377,13 @@ PRODUCT ANALYSIS — auto-detect from image/description
 =========================================================
 Detect and fill: product_name, category, function, features, target_audience, pain_points, customer_desire, buying_trigger, premium_selling_point, hidden_selling_point, visual_strength, demonstration_possibility, environment_recommendation, emotional_trigger.
 
+Every field must contain a CONCRETE, SPECIFIC observation — not a generic category description. These fields are the raw material the VO scripts will pull from later, so vague answers here directly cause generic-sounding VO.
+- WEAK: premium_selling_point: "kualitas bagus" — TOO VAGUE, not usable in VO
+- STRONG: premium_selling_point: "botol kaca amber yang melindungi kandungan dari sinar UV, beda dari kompetitor yang pakai plastik bening"
+- WEAK: hidden_selling_point: "praktis" — TOO VAGUE
+- STRONG: hidden_selling_point: "ukurannya travel-size jadi muat di tas kecil, banyak produk sejenis ukurannya kebesaran"
+Look closely at the actual image/description provided — texture, color, packaging, size, visible ingredients, form factor — and extract what is ACTUALLY true and specific about this exact product.
+
 =========================================================
 MARKETING ANGLE — pick ONE, never repeat
 =========================================================
@@ -1440,6 +1447,29 @@ ${purposeAdjustmentBlock}
 
 ${voiceCharacterBlock}
 
+SPECIFICITY MANDATE — THIS IS WHY VO SOUNDS GENERIC IF SKIPPED:
+Every scene's voice_over_script MUST reference at least ONE concrete, specific detail about THIS product — not a generic feeling that could apply to any product in any category. Pull the specific detail from what you detected in product_analysis (premium_selling_point, hidden_selling_point, pain_points, visual_strength, function, features) or directly from the product image/description provided.
+- A concrete detail is something only true of THIS product: a texture, an ingredient, a specific use-case, a specific physical feature, a specific problem it solves, how it looks/feels/smells/works
+- A generic filler is a feeling-only sentence with zero product-specific information — it could be copy-pasted onto a completely different product and still make sense
+- BEFORE finalizing each scene, ask: "if I swapped this VO onto a totally different product, would it still make sense?" If YES, it's too generic — rewrite it with an actual detail from this product.
+
+BANNED GENERIC FILLER (these are content-empty regardless of how natural they sound — do not use them as the ENTIRE scene content, only as a connector alongside a real detail):
+- "ini rahasia kecil yang baru gue nemu" (says nothing about the product)
+- "worth banget buat dicoba" (says nothing specific)
+- "gue nggak nyangka bakal secocok ini" (no concrete reason given)
+- "ini yang bikin gue balik lagi beli" (no reason stated)
+- "hasilnya beda banget" (different how? be specific)
+- "he found something amazing" (amazing how?)
+- Any sentence that only expresses excitement/surprise WITHOUT stating what specifically caused it
+
+GOOD vs GENERIC comparison:
+- GENERIC: "Ini rahasia kecil yang baru gue nemu dan worth banget buat dicoba"
+- SPECIFIC: "Teksturnya gel tapi begitu kena kulit langsung jadi kayak minyak — itu yang bikin gue kaget pertama kali"
+- GENERIC: "Hasilnya beda banget dari yang lain"
+- SPECIFIC: "Bau pandan-nya beneran authentic, bukan yang artificial kayak produk lain yang pernah gue coba"
+
+If product_analysis detected specific features/ingredients/mechanisms, USE THEM BY NAME in at least one scene. If the product image shows a distinctive visual trait (color, shape, packaging detail), reference it concretely instead of describing it vaguely.
+
 CRITICAL LANGUAGE RULES FOR EACH SCENE:
 - Use incomplete sentences, trailing off naturally: "...dan itu yang bikin gue..."
 - Use filler words naturally: "literally", "honestly", "serius deh", "kayaknya", "nggak nyangka"
@@ -1463,6 +1493,8 @@ ANTI-REPETITION RULES (critical for natural VO):
 - Natural speech has rhythm variation — mix declarative, question, and exclamatory tones across scenes
 
 ${richExamplesBlock}
+
+⚠️ IMPORTANT — HOW TO USE THE EXAMPLES ABOVE: These examples show RHYTHM, PACING, and TONE only — they are intentionally generic because they have no specific product attached. Do NOT reuse their exact phrasing in your output. Take the sentence structure/energy and rebuild it around a real, specific detail of THIS product per the SPECIFICITY MANDATE above.
 
 =========================================================
 SOUND DESIGN RULES
