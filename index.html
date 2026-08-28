@@ -357,7 +357,7 @@ function extractJSON(raw){
 }
 
 function repairJSON(s){
-  if(!s) return '{}';
+  if(!s) return ''; // genuinely empty — do NOT fake a valid '{}', let it fail parsing so the error path shows properly
   // Count open/close braces and brackets, add missing closers
   let braces=0, brackets=0;
   let inStr=false, escape=false;
@@ -412,6 +412,16 @@ async function geminiWithRetry(key, body, maxRetries=2){
           }
           throw new Error('Gemini API Error: '+data.error.message+'\n\nStatus: '+data.error.status);
         }
+        // Diagnose empty/blocked responses BEFORE treating as success — this prevents
+        // silently returning a response with no usable text (which used to render as "{}")
+        const diag=diagnoseGeminiResponse(data);
+        if(diag){
+          lastErr=diag;
+          const el=document.getElementById('stxt');
+          if(el) el.textContent=`${model}: ${diag} — retry ${r+1}/${maxRetries}...`;
+          await new Promise(ok=>setTimeout(ok,2000));
+          continue;
+        }
         if(r>0||m>0){const el=document.getElementById('stxt');if(el) el.textContent=`Berhasil pakai ${model}`+(r>0?' (retry '+(r+1)+')':'');}
         return data;
       }catch(err){
@@ -424,7 +434,27 @@ async function geminiWithRetry(key, body, maxRetries=2){
     const el=document.getElementById('stxt');
     if(el&&m<MODEL_FALLBACKS.length-1) el.textContent=`${model} masih sibuk, coba model lain: ${MODEL_FALLBACKS[m+1]}...`;
   }
-  throw new Error('Semua model Gemini sedang sibuk (dicoba: '+MODEL_FALLBACKS.join(', ')+'). Coba lagi dalam 1-2 menit.\n\nDetail: '+lastErr);
+  throw new Error('Semua model Gemini sedang sibuk atau responsnya kosong (dicoba: '+MODEL_FALLBACKS.join(', ')+'). Coba lagi dalam 1-2 menit.\n\nDetail: '+lastErr);
+}
+
+// Inspect a Gemini response for signs it produced no usable text —
+// blocked by safety filter, empty candidates, or truncated before any text was written.
+// Returns a human-readable reason string if something is wrong, or null if the response looks OK.
+function diagnoseGeminiResponse(data){
+  if(data?.promptFeedback?.blockReason){
+    return 'Diblokir safety filter ('+data.promptFeedback.blockReason+')';
+  }
+  const candidates=data?.candidates;
+  if(!candidates||candidates.length===0){
+    return 'Response kosong (tidak ada candidates)';
+  }
+  const cand=candidates[0];
+  const text=(cand?.content?.parts||[]).map(p=>p.text||'').join('');
+  if(!text||text.trim()===''){
+    const reason=cand?.finishReason||'UNKNOWN';
+    return 'Output kosong (finishReason: '+reason+')';
+  }
+  return null;
 }
 
 // Build Gemini request body from system prompt + parts (text + optional images)
@@ -438,7 +468,7 @@ function buildGeminiBody(system, parts){
   }).filter(Boolean);
   if(system) gParts.unshift({text:'SYSTEM INSTRUCTIONS:\n'+system+'\n\n---\n'});
   contents.push({role:'user',parts:gParts});
-  return{contents,generationConfig:{maxOutputTokens:8192,temperature:0.9}};
+  return{contents,generationConfig:{maxOutputTokens:16384,temperature:0.9,thinkingConfig:{thinkingBudget:0}}};
 }
 
 // Extract text from Gemini response
