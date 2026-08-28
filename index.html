@@ -1415,6 +1415,28 @@ Every field must contain a CONCRETE, SPECIFIC observation — not a generic cate
 Look closely at the actual image/description provided — texture, color, packaging, size, visible ingredients, form factor — and extract what is ACTUALLY true and specific about this exact product.
 
 =========================================================
+PRODUCT VISUAL FIDELITY — MANDATORY, HIGH PRIORITY
+=========================================================
+⚠️ This is a compliance-critical rule. If the generated video doesn't match the actual product photo, this can be flagged as misleading advertising / product misrepresentation by ad platforms — a real risk to the seller's account. Follow this section precisely.
+
+If a product image was provided, you MUST extract an EXACT visual description of the real physical product — not a generic or idealized version of "a product like this." Fill this into product_analysis.exact_visual_description using only what you can actually observe in the image:
+- Exact color(s) — be precise, not generic (e.g. "matte forest green with rose-gold cap" not just "green bottle")
+- Exact shape and form factor (bottle/tube/jar/box shape, proportions, cap style, closure type)
+- Exact packaging material appearance (glass, matte plastic, glossy plastic, cardboard, foil, etc)
+- Any visible text, logo, or label design elements — describe their position and style if legible (do not invent text you cannot actually read)
+- Size/scale impression relative to hands or context if visible
+- Any distinguishing visual feature that makes this specific product recognizable (unique cap shape, embossed pattern, distinctive color combo, etc)
+
+If NO product image was provided (topic-only / description-only generation), state exact_visual_description as "No reference image provided — using description only" and rely on the text description given.
+
+CONSISTENCY MANDATE ACROSS ALL SCENES:
+- EVERY scene's visual_prompt.subject MUST describe the product using the SAME exact_visual_description established above — copy the same color, shape, and distinguishing details into every scene, not a fresh/different interpretation each time
+- Do NOT invent new colors, shapes, or packaging details not present in the original reference — the product must look like the literal same physical object in every single scene, not a different item in the same category
+- Do NOT "improve" or "idealize" the product's appearance beyond what's actually in the reference — no upgrading a plain label to a fancy one, no changing a matte finish to glossy, etc
+- If the product image shows any wear, imperfection, or specific real-world detail, it's fine to smooth minor lighting but NEVER change the core identity (color/shape/branding) of the product
+- When writing each scene's visual_prompt.subject, explicitly restate the key visual identifiers (e.g. "the matte forest green bottle with rose-gold cap, exactly as shown, ...") so downstream image/video generators stay anchored to the real product across every single clip
+
+=========================================================
 MARKETING ANGLE — pick ONE, never repeat
 =========================================================
 Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use
@@ -1568,7 +1590,7 @@ OUTPUT STRUCTURE — return EXACTLY this JSON shape
     "social_platform": "${social}",
     "video_generators": ["${vPlatforms.join('","')}"]
   },
-  "product_analysis": { "product_name":"","category":"","function":"","target_audience":"","pain_points":[],"buying_trigger":"","premium_selling_point":"","emotional_trigger":"" },
+  "product_analysis": { "product_name":"","category":"","function":"","target_audience":"","pain_points":[],"buying_trigger":"","premium_selling_point":"","emotional_trigger":"","exact_visual_description":"" },
   "marketing_angle": { "name":"","hook_type":"","core_message":"" },
   "thumbnail": { "headline":"MAX 4 WORDS","sub_headline":"MAX 5 WORDS","emotion":"","lighting":"Premium Commercial","product_size":"40%" },
   "scenes": [
@@ -1588,7 +1610,7 @@ Each scene object — STANDALONE, complete, copy-pasteable to video generator:
   "purpose": "Hook",
   "voice_over_script": "VO line for THIS scene — word count follows the dynamic range + purpose adjustment from VOICE OVER RULES above, NOT a fixed number",
   "camera": { "movement": "", "lens": "", "speed": "" },
-  "visual_prompt": { "environment": "Ultra realistic", "subject": "Extremely detailed", "composition": "Commercial Composition", "lighting": "Premium cinematic", "camera_motion": "Dynamic", "depth_of_field": "Realistic", "quality": "Ultra realistic 8K", "aspect_ratio": "9:16" },
+  "visual_prompt": { "environment": "Ultra realistic", "subject": "MUST restate the exact_visual_description details (color/shape/packaging) established in product_analysis — the same physical product, not a generic reinterpretation", "composition": "Commercial Composition", "lighting": "Premium cinematic", "camera_motion": "Dynamic", "depth_of_field": "Realistic", "quality": "Ultra realistic 8K", "aspect_ratio": "9:16" },
   "motion_prompt": { "camera": "", "subject_motion": "", "background_motion": "", "transition": "" },
   "overlay_design": {
     "badge": { "text": "", "background": "Auto", "text_color": "Auto" },
@@ -1601,7 +1623,7 @@ Each scene object — STANDALONE, complete, copy-pasteable to video generator:
     "position": "Center"
   },
   "caption": "MAX 3 WORDS",
-  "negative_prompt": "static shots, talking head to camera, cinematic lens flare, overexposed, dark footage, blurry motion, slow motion beauty shot, repetitive VO phrases, duplicate words, filler word repetition, unnatural stiff movement, robotic motion, jarring cuts, jump cuts without transition, overcrowded text overlay, unreadable text, color grading artifacts, fake CGI, stock footage look, overly staged, commercial look, advertisement feel"
+  "negative_prompt": "static shots, talking head to camera, cinematic lens flare, overexposed, dark footage, blurry motion, slow motion beauty shot, repetitive VO phrases, duplicate words, filler word repetition, unnatural stiff movement, robotic motion, jarring cuts, jump cuts without transition, overcrowded text overlay, unreadable text, color grading artifacts, fake CGI, stock footage look, overly staged, commercial look, advertisement feel, different product than reference, mismatched packaging color, altered label design, wrong bottle/container shape, generic product substitute, inconsistent product appearance between scenes"
 }`;
   return sys;
 }
