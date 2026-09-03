@@ -250,6 +250,7 @@ select option{background:#1a1a26;}
         <div class="pill" data-val="Green Screen">Green Screen</div>
         <div class="pill" data-val="Split Screen">Split Screen</div>
         <div class="pill" data-val="Text Story">Text Story</div>
+        <div class="pill" data-val="Raw Selfie Story">Raw Selfie Story</div>
       </div>
     </div>
     <div>
@@ -677,14 +678,20 @@ async function submitLicense(){
   btn.textContent = 'Memvalidasi...';
 
   try{
-    const res = await fetch('/api/validate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key })
-    });
-    const data = await res.json();
+    // Validasi 100% lokal via SHA-256 — TIDAK butuh backend/API route,
+    // TIDAK butuh Environment Variables Vercel. Key hash tersimpan langsung
+    // di file ini, jadi tetap jalan meski redeploy ke project Vercel baru.
+    const msgBuf = new TextEncoder().encode(key);
+    const hashBuf = await crypto.subtle.digest('SHA-256', msgBuf);
+    const hashHex = Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 
-    if(data.valid){
+    const VALID_HASHES = [
+      'f7cd984ec8cfd898f281c7e9f2f164e1d72a675bde056b33aeecc1de5c3d8cd1', // OMNI-4JCM-N98B-5FXV
+      'e917593128913ca13866ee8b3f86052c7ca79437d7b826f4705c982f8e4ec0f6', // OMNI-FQ6K-YUBH-DNNY
+      '56386177441e022e2df9b276bf3422b682a31e8f693a59bc51059ee7cad051ad', // OMNI-FV4Z-UNVS-GSJG
+    ];
+
+    if(VALID_HASHES.includes(hashHex)){
       localStorage.setItem('omniflash_license', 'valid');
       document.getElementById('license-gate').classList.add('hidden');
       btn.textContent = 'Aktivasi';
@@ -697,7 +704,7 @@ async function submitLicense(){
       btn.disabled = false;
     }
   }catch(err){
-    errEl.textContent = 'Gagal terhubung ke server validasi. Coba lagi.';
+    errEl.textContent = 'Gagal memvalidasi key. Coba lagi.';
     errEl.classList.add('visible');
     btn.textContent = 'Aktivasi';
     btn.disabled = false;
@@ -1219,6 +1226,32 @@ VISUAL RULES:
 VOICE OVER: narrates the story as if reading the messages aloud / narrating "what happened" — first-person storytelling tone: "jadi ceritanya gini...", "terus dia bales...", "sampai akhirnya..."
 
 OVERLAY: overlay design in this style is largely the chat/text UI itself — keep the standard badge/keyword elements minimal and positioned so they don't collide with the simulated chat bubbles (e.g. badge only in the corner, not covering message text).
+`,
+
+    'Raw Selfie Story': `
+=========================================================
+RAW SELFIE STORY STYLE — ADDITIVE VISUAL GUIDANCE
+=========================================================
+This style is a deliberately RAW, native, phone-selfie storytime video — the opposite of polished/cinematic. It must feel like a real personal video someone recorded of themselves confiding a story, NOT an advertisement. Native feel is the entire point: imperfect framing, natural home lighting, handheld front-camera selfie angle.
+
+VISUAL RULES:
+- Camera is always front-facing selfie POV — talent holding the phone themselves, arm's-length or mirror-selfie distance, slightly shaky/handheld, natural imperfect framing (subject not always perfectly centered)
+- Setting: real home environment — bedroom, on a bed, near a window with natural daylight, casual home clothing (pajamas, loungewear) — NEVER a studio, NEVER staged commercial lighting
+- Lighting: natural and imperfect — window light, ambient room light, occasional soft shadow or slight underexposure — reject anything that reads as "lit for a shoot"
+- Expression/performance: genuine, unfiltered emotional reactions — natural laughing, exaggerated reactions, casual physical movement (touching face/hair, shifting position, flopping back onto the bed) — imperfection is authenticity, not a flaw
+- Treat the whole video as feeling like ONE continuous raw take even when split across scenes — maintain the same handheld selfie framing style and home setting across every scene for continuity
+- Never break into cinematic B-roll cutaways or product-only shots — the talent's face and reactions stay the visual anchor throughout, product appears in-hand or in-frame naturally rather than as a separate hero shot
+
+VOICE OVER: raw storytime/confession tone — first-person, conversational, builds curiosity like telling a friend a secret. Natural speech patterns, pauses, trailing off, genuine-sounding reactions. Never scripted-sounding, never salesy in the body of the story.
+
+OVERLAY — PROGRESSIVE WORD REVEAL (uses the standard overlay_design.keyword field, not a new field):
+- Instead of one static keyword per scene, treat overlay_design.keyword.text as the CURRENT key word/phrase of a sentence being revealed progressively as the VO speaks — bold, centered, high-contrast (typically bright yellow), timed to land exactly on the spoken word it represents
+- Each scene's keyword should be ONE short word or very short phrase from that moment's VO (e.g. "JUJUR", "DIA", a number/price) — never a full sentence
+- On the final scene, the keyword can be the price/offer itself (e.g. "145.000") styled the same bold way, functioning as the reveal payoff of the story
+- Badge and headline fields stay minimal/near-invisible in this style — the keyword reveal IS the primary text treatment; do not add competing heavy graphic overlays
+- This progressive reveal still uses the exact same overlay_design JSON structure already defined — only the CONTENT strategy changes (one punchy revealing word per scene instead of a generic keyword)
+
+CAMERA/MOTION: handheld micro-shake throughout, natural arm-length selfie movement, occasional whip/blur transition between scenes (mimicking a real phone recording being picked back up) — avoid smooth dolly/orbit/cinematic movement entirely in this style.
 `
   };
   const styleVariantBlock = STYLE_VARIANT_MAP[vStyle] || '';
