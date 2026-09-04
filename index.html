@@ -340,7 +340,7 @@ select option{background:#1a1a26;}
 <script>
 const MODEL="gemini-3.5-flash";
 // Fallback chain: kalau model utama lagi overload (503/429), coba model lain sebelum nyerah
-const MODEL_FALLBACKS=["gemini-3.5-flash","gemini-3.5-flash-lite","gemini-2.5-flash"];
+const MODEL_FALLBACKS=["gemini-3.6-flash","gemini-3.5-flash-lite","gemini-2.5-flash"];
 const b64store={vp:null,vt:null,ip:null,it:null};
 // JSON extraction helpers
 function extractJSON(raw){
@@ -395,14 +395,21 @@ function geminiAPI(key,model){
 // Fetch with auto-retry + auto-fallback across models (kalau satu model overload, coba model lain)
 // Body dibangun ULANG per model (bukan direuse) karena tiap model butuh generationConfig
 // thinking yang berbeda — lihat getThinkingConfig().
+// Setiap attempt punya timeout 25s — kalau Gemini hang tanpa respons, kita potong lebih cepat
+// dan pindah ke retry/model berikutnya, daripada nunggu tanpa batas (ini yang bikin generate
+// bisa numpuk jadi bermenit-menit kalau satu attempt hang lama).
 async function geminiWithRetry(key, system, parts, maxRetries=2){
   let lastErr=null;
+  const ATTEMPT_TIMEOUT_MS=45000;
   for(let m=0;m<MODEL_FALLBACKS.length;m++){
     const model=MODEL_FALLBACKS[m];
     const body=buildGeminiBody(system, parts, model);
     for(let r=0;r<maxRetries;r++){
+      const controller=new AbortController();
+      const timeoutId=setTimeout(()=>controller.abort(),ATTEMPT_TIMEOUT_MS);
       try{
-        const res=await fetch(geminiAPI(key,model),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const res=await fetch(geminiAPI(key,model),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
+        clearTimeout(timeoutId);
         const data=await res.json();
         if(data.error){
           const status=data.error.status||'';
@@ -429,8 +436,15 @@ async function geminiWithRetry(key, system, parts, maxRetries=2){
         if(r>0||m>0){const el=document.getElementById('stxt');if(el) el.textContent=`Berhasil pakai ${model}`+(r>0?' (retry '+(r+1)+')':'');}
         return data;
       }catch(err){
-        if(err.message.startsWith('Gemini API Error:')) throw err;
-        lastErr=err.message;
+        clearTimeout(timeoutId);
+        if(err.message&&err.message.startsWith('Gemini API Error:')) throw err;
+        if(err.name==='AbortError'){
+          lastErr=`${model} tidak merespons dalam ${ATTEMPT_TIMEOUT_MS/1000}s (timeout)`;
+          const el=document.getElementById('stxt');
+          if(el) el.textContent=`${model} timeout, mencoba lagi...`;
+        } else {
+          lastErr=err.message;
+        }
         if(r<maxRetries-1) await new Promise(ok=>setTimeout(ok,2000));
       }
     }
