@@ -393,10 +393,13 @@ function geminiAPI(key,model){
 }
 
 // Fetch with auto-retry + auto-fallback across models (kalau satu model overload, coba model lain)
-async function geminiWithRetry(key, body, maxRetries=2){
+// Body dibangun ULANG per model (bukan direuse) karena tiap model butuh generationConfig
+// thinking yang berbeda — lihat getThinkingConfig().
+async function geminiWithRetry(key, system, parts, maxRetries=2){
   let lastErr=null;
   for(let m=0;m<MODEL_FALLBACKS.length;m++){
     const model=MODEL_FALLBACKS[m];
+    const body=buildGeminiBody(system, parts, model);
     for(let r=0;r<maxRetries;r++){
       try{
         const res=await fetch(geminiAPI(key,model),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -459,7 +462,7 @@ function diagnoseGeminiResponse(data){
 }
 
 // Build Gemini request body from system prompt + parts (text + optional images)
-function buildGeminiBody(system, parts){
+function buildGeminiBody(system, parts, model){
   const contents=[];
   // Convert parts (Anthropic format) to Gemini format
   const gParts=parts.map(p=>{
@@ -469,7 +472,19 @@ function buildGeminiBody(system, parts){
   }).filter(Boolean);
   if(system) gParts.unshift({text:'SYSTEM INSTRUCTIONS:\n'+system+'\n\n---\n'});
   contents.push({role:'user',parts:gParts});
-  return{contents,generationConfig:{maxOutputTokens:16384,temperature:0.9,thinkingConfig:{thinkingBudget:0}}};
+  return{contents,generationConfig:{maxOutputTokens:16384,...getThinkingConfig(model)}};
+}
+
+// Gemini 3.x (gemini-3.5-flash, gemini-3.5-flash-lite) do NOT support thinkingBudget to fully
+// disable thinking — they need thinkingLevel instead, and cannot go fully thinking-off.
+// Sending thinkingBudget to a 3.x model is silently ignored, so the model falls back to its
+// default "medium" thinking level on EVERY request — this was the real cause of slow generation.
+// Gemini 2.x (gemini-2.5-flash) still uses thinkingBudget and CAN fully disable thinking with 0.
+function getThinkingConfig(model){
+  if(!model || model.startsWith('gemini-3')){
+    return {thinkingConfig:{thinkingLevel:'low'}};
+  }
+  return {thinkingConfig:{thinkingBudget:0}};
 }
 
 // Extract text from Gemini response
@@ -582,11 +597,11 @@ async function analyzeProduct(){
   btn.disabled=true; btn.textContent='Menganalisis...';
   try{
     const key=getKey();
-    const body=buildGeminiBody(null,[
+    const parts=[
       {type:'image',source:{media_type:b64store.vp.mime,data:b64store.vp.data}},
       {type:'text',text:'Analyze this product image. Return ONLY JSON (no markdown): {"product_name":"","description":"1-2 sentences on function and key features","category":"","target_audience":""}'}
-    ]);
-    const data=await geminiWithRetry(key,body);
+    ];
+    const data=await geminiWithRetry(key,null,parts);
     // Cek error dari API dulu
     if(data.error){
       alert('Gemini API Error: '+data.error.message+'\n\nStatus: '+data.error.status);
@@ -1763,8 +1778,7 @@ Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison,
     // so one failed angle never breaks the other angles in Promise.all
     try{
       const key=getKey();
-      const body=buildGeminiBody(sysFinal,parts);
-      const data=await geminiWithRetry(key,body);
+      const data=await geminiWithRetry(key,sysFinal,parts);
       let raw=geminiText(data);
       let js=extractJSON(raw);
       let parsed=null;
@@ -2012,8 +2026,7 @@ Return ONLY this JSON:
 
   try{
     const key=getKey();
-    const body=buildGeminiBody(sys,parts);
-    const data=await geminiWithRetry(key,body);
+    const data=await geminiWithRetry(key,sys,parts);
     clearInterval(timer);
     let raw=geminiText(data);
     let js=extractJSON(raw);
@@ -2139,8 +2152,7 @@ Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison,
     const parts=[...baseParts,{type:'text',text:`Product: ${productName}\nDesc: ${productDesc||'see image'}\n${(isFactoryCrisis||isAnomaly)?'':'Talent: '+(talentDesc||'auto')+'\n'}Country: ${country}\nStyle: ${vStyle}${isFactoryCrisis?'\nJenis Krisis: '+crisisTypeLabel:''}${isAnomaly?'\nMusuh/Masalah Anomali: '+(anomalyEnemy||'(auto-detect dari produk)'):''}\n${retrySc} scenes @ ${vScene}s | Purposes: ${ps.join(', ')}\nAngle: ${retryAngle}\nGenerate complete JSON.`}];
 
     const key=getKey();
-    const body=buildGeminiBody(sysFinal,parts);
-    const data=await geminiWithRetry(key,body);
+    const data=await geminiWithRetry(key,sysFinal,parts);
     let raw=geminiText(data);
     let js=extractJSON(raw);
     let parsed=null;
