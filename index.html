@@ -803,6 +803,46 @@ function startCycle(arr){let i=0;return setInterval(()=>{i=(i+1)%arr.length;cons
 // ── VIDEO GENERATE ──
 function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType,isAnomaly,anomalyEnemy){
   const sc=scOverride||scCount(), ps=psOverride||purposes(sc), lang=LANG[country];
+  // Per-region colloquial speech guide — prevents VO from sounding formal/textbook/English-translated,
+  // which is what causes voice references/TTS to come out with an English-influenced accent.
+  const NATIVE_LANGUAGE_GUIDE_MAP={
+    'Indonesia': `NATIVE INDONESIAN SPEECH GUIDE:
+- Use casual first-person pronouns: "gue/aku" not formal "saya", "lo/kamu" not formal "Anda"
+- Use real everyday particles/fillers naturally: "sih", "deh", "nih", "kok", "banget", "aja", "loh", "dong" — these make speech sound native, not translated
+- AVOID stiff/formal words that sound translated from English: "sangat" (use "banget"), "hal ini" (just cut it), "dapat" as "bisa" is fine but "adalah" for "is" should usually be dropped entirely (Indonesian often skips "to be")
+- AVOID unnecessary English loanwords unless they're genuinely common in casual Indonesian speech (e.g. "worth it", "ngerti", "oke" are fine; but don't force English words that a real person wouldn't naturally mix in)
+- Sentence rhythm: short, punchy, conversational — real people don't speak in complete grammatically "correct" sentences, they trail off, use "kan", start sentences with "jadi" or "terus"
+- Example of BAD (too formal/translated-sounding): "Saya sangat merekomendasikan produk ini karena memiliki banyak manfaat"
+- Example of GOOD (native casual): "Ini worth banget sih buat dicoba, manfaatnya kerasa banget"`,
+    'Malaysia': `NATIVE MALAYSIAN SPEECH GUIDE:
+- Use casual pronouns: "aku/saya" (saya still casual-acceptable in MY, unlike ID), "kau/awak/korang" not overly formal address
+- Use real everyday particles naturally: "lah", "kan", "je" (just), "tau", "kot" — these are what make it sound native Malaysian, not translated
+- AVOID stiff Malay that sounds like formal written Bahasa Melayu textbook style — real spoken Malaysian mixes in casual shortenings
+- Sentence rhythm: relaxed, particle-heavy, conversational — not grammatically "complete" formal sentences
+- Example of BAD (too formal): "Saya amat mengesyorkan produk ini kerana ia mempunyai banyak faedah"
+- Example of GOOD (native casual): "Ni memang worth it nak try, faedah dia rasa terus lah"`,
+    'Singapore': `NATIVE SINGAPOREAN ENGLISH (SINGLISH-INFLUENCED) SPEECH GUIDE:
+- Use natural Singlish rhythm and particles where appropriate: "lah", "leh", "sia", "one" (as in "damn good one") — but keep it readable, not caricature-level exaggerated
+- Casual contractions and dropped subjects are natural: "Confirm plus chop good this one" style brevity is fine in small doses
+- AVOID overly polished British/American-textbook English — that reads as foreign/corporate, not like a real Singaporean talking casually
+- Sentence rhythm: short, direct, slightly clipped — real Singaporeans don't over-explain
+- Example of BAD (too formal/foreign-sounding): "I would definitely recommend this product as it offers many benefits"
+- Example of GOOD (native casual): "This one really worth it lah, benefits you can feel one"`,
+    'Thailand': `NATIVE THAI SPEECH GUIDE:
+- Use casual first-person forms appropriate to a young creator talking to friends (ฉัน/เรา casual, not overly formal ดิฉัน in every sentence)
+- Use natural spoken particles: "นะ", "ค่ะ/ครับ" only where naturally used in casual speech (not stiffly on every sentence), "เลย", "จริงๆ" — these signal genuine casual Thai speech
+- AVOID textbook-formal Thai structure that sounds like a written announcement rather than a friend talking
+- Sentence rhythm: warm, casual, trailing particles common in real spoken Thai
+- Keep the register consistent with a casual social-media creator, not a formal presenter`,
+    'Philippines': `NATIVE FILIPINO-ENGLISH (TAGLISH) SPEECH GUIDE:
+- Natural Filipino creators speak in Taglish — mixing Filipino and English fluidly, not pure formal English
+- Use natural fillers/particles: "talaga", "kasi", "naman", "diba", "grabe", "sobrang" — these are what make it sound like a real Filipino creator, not a scripted English ad
+- AVOID pure formal English that sounds like a corporate voiceover — real creators mix in Filipino words/phrasing naturally
+- Sentence rhythm: expressive, casual, emotionally warm — Filipino creator content tends to be enthusiastic and relatable
+- Example of BAD (too formal/pure English): "I highly recommend this product because it has many benefits"
+- Example of GOOD (native Taglish): "Sobrang worth it talaga nito, grabe yung benefits na nararamdaman ko"`
+  };
+  const nativeLanguageGuide = NATIVE_LANGUAGE_GUIDE_MAP[country] || NATIVE_LANGUAGE_GUIDE_MAP['Indonesia'];
   // CTA per platform × per country
   const CTA_MATRIX={
     'TikTok':{
@@ -1586,6 +1626,10 @@ VOICE OVER RULES — CRITICAL — DYNAMIC WORD COUNT PER SCENE
 =========================================================
 Language: ${lang}
 Tone: ${toneLine}
+
+EVERYDAY REGIONAL LANGUAGE MANDATE — NON-NEGOTIABLE:
+The voice_over_script MUST be written in genuine, casual, EVERYDAY spoken ${lang} — the way a real local person actually talks to a friend, NOT formal/textbook ${lang}, NOT a direct translation from English, and NOT phrasing that sounds English-influenced when read aloud. This matters even more than usual because the VO text is fed into a voice reference/TTS system — if the wording is stiff, overly formal, or structured like translated English, the voice comes out sounding accented/foreign instead of native. Every scene's voice_over_script must pass this test: "would a local ${country} person actually say it exactly like this in real life?" If it sounds translated or written, rewrite it in real colloquial speech.
+${nativeLanguageGuide}
 
 IMPORTANT: Generate the VO script directly inside EACH scene object as "voice_over_script" — not as a separate combined script.
 
