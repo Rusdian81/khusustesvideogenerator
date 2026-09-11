@@ -181,6 +181,13 @@ select option{background:#1a1a26;}
     </div>
     <div class="field"><label>Nama produk</label><input type="text" id="vp-name" placeholder="Auto-fill setelah analisis, atau isi manual"></div>
     <div class="field"><label>Deskripsi singkat</label><textarea id="vp-desc" placeholder="Auto-fill setelah analisis, atau isi manual"></textarea></div>
+    <div class="field" id="motive-section">
+      <label>Buying Motive <span style="color:var(--muted);font-size:11px;">(opsional — anchor psikologis kenapa orang mau beli)</span></label>
+      <button class="analyze-btn" id="motive-analyze-btn" onclick="analyzeBuyingMotive()" type="button" style="margin-bottom:8px;">&#129504; Analisa Buying Motive</button>
+      <div id="motive-chips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      <div id="motive-selected-info" style="display:none;font-size:12px;color:var(--success);margin-top:6px;">✓ Motif terpilih: <strong id="motive-selected-text"></strong> <span style="color:var(--muted);cursor:pointer;text-decoration:underline;" onclick="clearMotive()">(hapus)</span></div>
+      <div class="hint" style="font-size:11px;color:var(--muted);margin-top:4px;">AI akan analisa produk lalu kasih 8-15 alasan psikologis spesifik kenapa orang mau beli. Pilih satu untuk jadi fokus utama Hook &amp; Problem di video ini — kalau tidak dipilih, AI akan tentukan sendiri seperti biasa.</div>
+    </div>
     <div class="field" id="edu-topic-field" style="display:none;">
       <label>Topik edukasi <span style="color:var(--success);font-size:11px;">(opsional jika ada produk)</span></label>
       <input type="text" id="edu-topic" placeholder="cth: Manfaat vitamin C untuk kulit, Tips memilih skincare...">
@@ -255,12 +262,19 @@ select option{background:#1a1a26;}
     </div>
     <div>
       <div class="slabel">Durasi Video</div>
-      <div class="pill-group" id="v-dur">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="v-dur-input" value="15" style="width:70px;text-align:center;font-weight:700;font-size:15px;" onchange="setDurFromInput()" oninput="setDurFromInput()">
+        <span style="font-size:13px;color:var(--muted);">detik total</span>
+      </div>
+      <div class="pill-group" id="v-dur" style="margin-top:8px;">
         <div class="pill dur" data-val="10">10s</div>
         <div class="pill dur active" data-val="15">15s</div>
         <div class="pill dur" data-val="25">25s</div>
         <div class="pill dur" data-val="30">30s</div>
+        <div class="pill dur" data-val="45">45s</div>
+        <div class="pill dur" data-val="60">60s</div>
       </div>
+      <div class="hint" style="font-size:11px;color:var(--muted);margin-top:4px;">Ketik durasi custom di atas (mis. 40, 90) — makin panjang durasi, makin banyak scene &amp; makin lengkap alur ceritanya (Hook → Problem → Agitate → Solution → Benefit → Social Proof → Urgency → CTA).</div>
     </div>
     <div>
       <div class="slabel">Platform Video Generator</div>
@@ -644,6 +658,75 @@ function makePills(groupId,cb){
     p.onclick=()=>{document.querySelectorAll('#'+groupId+' .pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');cb(p.dataset.val);};
   });
 }
+
+// ── BUYING MOTIVE ────────────────────────────────────────────
+// Optional layer: AI generates 8-15 SPECIFIC psychological reasons why someone buys THIS
+// product (not generic Fear/Desire labels — actual sentences tied to this product). User
+// picks one, and it becomes the anchor for Hook/Problem/Agitate in the final generation.
+let selectedBuyingMotive='';
+async function analyzeBuyingMotive(){
+  const name=document.getElementById('vp-name').value.trim();
+  const desc=document.getElementById('vp-desc').value.trim();
+  if(!name){alert('Isi Nama Produk dulu (atau jalankan Analisis Produk dengan AI).');return;}
+  const btn=document.getElementById('motive-analyze-btn');
+  btn.disabled=true; btn.textContent='Menganalisis motif...';
+  document.getElementById('motive-chips').innerHTML='';
+  try{
+    const key=getKey();
+    const prompt=`Kamu adalah Meta Ads Creative Strategist. Setiap creative harus dibangun dari psikologi pembeli (buying motive) dulu, sebelum eksekusi.
+
+PRODUK: ${name}
+DESKRIPSI: ${desc||'-'}
+
+TUGAS: Tentukan buying motive paling relevan untuk produk ini — alasan psikologis KENAPA orang mau beli (bukan fitur produk). Minimal 8, maksimal 15 motif. Boleh terinspirasi kategori seperti Fear, Desire, Convenience, Financial, Status, Family, Career, Lifestyle, Emotion, Security, Health, Confidence, Social Proof, Urgency, Curiosity — tapi tulis SPESIFIK ke produk ini, bukan generic/template.
+
+WAJIB balas HANYA dengan JSON array of string, tanpa markdown/backtick/penjelasan tambahan. Tiap string maksimal 12 kata.`;
+    const parts=[{type:'text',text:prompt}];
+    const data=await geminiWithRetry(key,null,parts);
+    if(data.error){
+      alert('Gemini API Error: '+data.error.message);
+      btn.disabled=false; btn.textContent='🧠 Analisa Buying Motive'; return;
+    }
+    let raw=geminiText(data);
+    if(!raw){
+      alert('Response kosong dari Gemini. Coba lagi.');
+      btn.disabled=false; btn.textContent='🧠 Analisa Buying Motive'; return;
+    }
+    raw=extractJSON(raw);
+    const motives=JSON.parse(raw);
+    renderMotiveChips(motives);
+    btn.textContent='🧠 Re-analisa Buying Motive';
+  }catch(err){
+    alert('Error: '+err.message);
+    btn.textContent='🧠 Analisa Buying Motive';
+  }
+  btn.disabled=false;
+}
+function renderMotiveChips(motives){
+  const container=document.getElementById('motive-chips');
+  container.innerHTML='';
+  if(!Array.isArray(motives)) return;
+  motives.forEach(m=>{
+    const chip=document.createElement('div');
+    chip.className='pill';
+    chip.style.cssText='border-color:rgba(124,92,252,.35);';
+    chip.textContent=m;
+    chip.onclick=()=>selectMotive(m,chip);
+    container.appendChild(chip);
+  });
+}
+function selectMotive(motive,chipEl){
+  selectedBuyingMotive=motive;
+  document.querySelectorAll('#motive-chips .pill').forEach(c=>c.classList.remove('active'));
+  chipEl.classList.add('active');
+  document.getElementById('motive-selected-info').style.display='';
+  document.getElementById('motive-selected-text').textContent=motive;
+}
+function clearMotive(){
+  selectedBuyingMotive='';
+  document.querySelectorAll('#motive-chips .pill').forEach(c=>c.classList.remove('active'));
+  document.getElementById('motive-selected-info').style.display='none';
+}
 makePills('v-style',v=>{
   vStyle=v;
   const isEdu = v==='Edukasi';
@@ -663,7 +746,25 @@ makePills('v-style',v=>{
   // Edukasi: sembunyikan platform sosial (tidak ada CTA = tidak perlu platform)
   // Tapi tetap tampilkan untuk keperluan bahasa
 });
-makePills('v-dur',v=>{vDur=parseInt(v);updateSI();});
+makePills('v-dur',v=>{
+  vDur=parseInt(v);
+  const inp=document.getElementById('v-dur-input');
+  if(inp) inp.value=vDur;
+  updateSI();
+});
+function setDurFromInput(){
+  const inp=document.getElementById('v-dur-input');
+  let n=parseInt((inp?.value||'').replace(/[^\d]/g,''));
+  if(!n||n<4) n=4; // minimum sensible duration
+  if(n>90) n=90; // sanity cap — realistic ceiling for short-form affiliate video ads
+  vDur=n;
+  if(inp) inp.value=n;
+  // Sync pill active state — highlight matching pill if value matches a quick-select, else deselect all
+  document.querySelectorAll('#v-dur .pill.dur').forEach(p=>{
+    p.classList.toggle('active', parseInt(p.dataset.val)===n);
+  });
+  updateSI();
+}
 
 // ── License gate ──
 (function(){
@@ -758,7 +859,7 @@ function updateSI(){
   document.getElementById('sc-dur').textContent=vDur+'s';
   document.getElementById('sc-per').textContent=vScene+'s/scene';
 }
-function scCount(){return Math.max(1,Math.ceil(vDur/vScene));}
+function scCount(){return Math.max(1,Math.min(12,Math.ceil(vDur/vScene)));}
 function purposes(n){
   if(vStyle==='Factory Crisis'){
     // Priority hierarchy (locked): Factory Validation (always #1) → Crisis Hook → Internal Pressure → QC Pass → Clearance Logic → CTA Loop (always last)
@@ -789,12 +890,31 @@ function purposes(n){
     rEdu.push('Key Takeaway');
     return rEdu;
   }
-  if(n===1)return['Hook + CTA'];
-  if(n===2)return['Hook','CTA'];
-  const mid=['Reveal','Demo','Benefit','Social Proof'];
-  const r=['Hook'];
-  for(let i=0;i<n-2;i++)r.push(mid[i%mid.length]);
-  r.push('CTA'); return r;
+  // Default funnel (used by all simple + additive styles — Factory Crisis/Anomali/Edukasi keep
+  // their own dedicated structure above, untouched). This scales properly with scene count
+  // instead of generically cycling the same 4 labels — makin banyak scene, makin lengkap
+  // "amunisi psikologis" sebelum CTA (Hook → Problem → Agitate → Solution → Benefit/Proof →
+  // Social Proof/Testimonial → Urgency/Offer → CTA), bukan cuma diulang-ulang.
+  if(n===1) return['Hook + CTA'];
+  const FUNNEL_MAP={
+    2: ['Hook', 'Solution + CTA'],
+    3: ['Hook', 'Problem', 'Solution + CTA'],
+    4: ['Hook', 'Problem', 'Solution', 'CTA'],
+    5: ['Hook', 'Problem', 'Agitate', 'Solution', 'CTA'],
+    6: ['Hook', 'Problem', 'Agitate', 'Solution', 'Benefit/Proof', 'CTA'],
+    7: ['Hook', 'Problem', 'Agitate', 'Solution', 'Benefit/Proof', 'Social Proof/Testimonial', 'CTA'],
+    8: ['Hook', 'Problem', 'Agitate', 'Solution', 'Benefit/Proof', 'Social Proof/Testimonial', 'Urgency/Offer', 'CTA'],
+  };
+  if(FUNNEL_MAP[n]) return FUNNEL_MAP[n];
+  // Beyond 8 scenes (now possible with typed custom duration): extend by cycling extra
+  // supporting beats before the final CTA, keeping Hook first and CTA last always locked.
+  const base=FUNNEL_MAP[8].slice(0,-1); // everything except CTA
+  const extraCycle=['Benefit/Proof','Social Proof/Testimonial'];
+  const extended=[...base];
+  let i=0;
+  while(extended.length < n-1){ extended.push(extraCycle[i%extraCycle.length]); i++; }
+  extended.push('CTA');
+  return extended;
 }
 
 function loadingHTML(s){return`<div style="display:flex;flex-direction:column;gap:11px;padding:6px 0;"><div class="lbar on"><div class="lbar-in"></div></div><div class="stxt on" id="stxt">${s}</div></div>`;}
@@ -1333,14 +1453,16 @@ CAMERA/MOTION: handheld micro-shake throughout, natural arm-length selfie moveme
     ? 'Quality: Ultra realistic 8K photoreal environment with premium 3D CGI character render composited in — Pixar/DreamWorks character quality'
     : 'Quality: Ultra realistic 8K';
   const sceneDnaBlock=isFactoryCrisis
-    ? `(Use the SCENE PURPOSE DNA defined in the FACTORY CRISIS MODE section above — Factory Validation / Crisis Hook / Internal Pressure / QC Pass / Clearance Logic / CTA Loop. Do NOT use Hook/Reveal/Demo/Benefit/Social Proof DNA below, it does not apply to this style.)`
+    ? `(Use the SCENE PURPOSE DNA defined in the FACTORY CRISIS MODE section above — Factory Validation / Crisis Hook / Internal Pressure / QC Pass / Clearance Logic / CTA Loop. Do NOT use the default Hook/Problem/Agitate/Solution/Benefit-Proof/Social-Proof/Urgency/CTA DNA below, it does not apply to this style.)`
     : isAnomaly
-    ? `(Use the SCENE PURPOSE DNA defined in the ANOMALI MASCOT MODE section above — Anomaly Discovery / Conflict Setup / Struggle Moment / Turning Point / Victory / Product Hero Shot + CTA. Do NOT use Hook/Reveal/Demo/Benefit/Social Proof DNA below, it does not apply to this style.)`
+    ? `(Use the SCENE PURPOSE DNA defined in the ANOMALI MASCOT MODE section above — Anomaly Discovery / Conflict Setup / Struggle Moment / Turning Point / Victory / Product Hero Shot + CTA. Do NOT use the default Hook/Problem/Agitate/Solution/Benefit-Proof/Social-Proof/Urgency/CTA DNA below, it does not apply to this style.)`
     : `Hook → Pattern interrupt, extreme close-up or shocking visual, zero context drop, stops scroll
-Reveal → Hero product shot, dynamic movement, premium lighting
-Demo → Macro/extreme close-up of product in use, hands-on demonstration
-Benefit → Lifestyle visualization, transformation, emotional payoff
-Social Proof → Testimonial feel, reactions, before/after moment
+Problem → State the specific pain/frustration the viewer relates to — grounded in a real situation, not abstract. Visual: the problem itself, or a relatable moment of struggle/annoyance.
+Agitate → Deepen the pain point emotionally — what it costs them, how long they've dealt with it, why past attempts failed. Visual: frustration intensifying, the problem's real-world consequence shown.
+Solution → Product enters as the clear answer to the problem just established — hero product shot, dynamic movement, premium lighting, direct connection back to the pain point.
+Benefit/Proof → Concrete result/transformation the product delivers — lifestyle visualization, tangible payoff, specific proof point (not vague feeling).
+Social Proof/Testimonial → Third-party validation feel — reactions, testimonial energy, before/after moment, "other people already found this works."
+Urgency/Offer → Reason to act now — genuine urgency/offer framing tied to the CTA style rules above (never fabricated scarcity unless CTA style explicitly allows it).
 CTA → Hero push-in, luxury rim light, CTA overlay, call to action per platform rules above`;
   const cameraMoveBlock=isFactoryCrisis
     ? `(Use the CAMERA MOVEMENT RULES defined in the FACTORY CRISIS MODE section above — handheld, raw, observational. Do NOT use the dolly/orbit/luxury rules below, they do not apply to this style.)`
@@ -1404,12 +1526,12 @@ Indonesia Hook examples (pick energy that matches the angle):
 - "Tau nggak, udah lama banget gue nyari yang kayak gini dan akhirnya nemu juga"
 - "Gue nggak bakal review kalau nggak beneran suka — dan ini salah satunya"
 
-Indonesia Demo examples:
+Indonesia Solution/Demo examples (product entering as the answer):
 - "Coba lihat deh, pas gue aplikasikan langsung nyerap, nggak ada residu sama sekali"
 - "Teksturnya ringan banget, nggak lengket, dan baunya... enak banget sumpah"
 - "Yang gue suka, hasilnya kelihatan langsung — nggak perlu nunggu berminggu-minggu"
 
-Indonesia Benefit examples:
+Indonesia Benefit/Proof examples:
 - "Setelah pakai ini rutin, yang paling kerasa tuh... rasanya beda banget dari sebelumnya"
 - "Jujur ini yang bikin gue balik lagi beli, karena hasilnya konsisten dan beneran kerasa"
 
@@ -1423,12 +1545,12 @@ English Hook examples:
 - "This is the kind of find that makes you want to tell everyone immediately"
 - "So I randomly tried this and... I genuinely can't stop thinking about it"
 
-English Demo examples:
+English Solution/Demo examples (product entering as the answer):
 - "Look at how it just... melts right in. No residue, no heaviness, nothing"
 - "The texture is so lightweight and the scent? Actually amazing"
 - "You can literally see the difference as it works — that's the part that got me"
 
-English Benefit examples:
+English Benefit/Proof examples:
 - "After using this consistently the change is honestly noticeable — and I'm picky"
 - "This is why I keep coming back to it. It's just consistently good"
 
@@ -1454,10 +1576,12 @@ Singapore/Philippines English Hook examples:
 - Victory → mid. Warm, relieved, triumphant resolution.
 - Product Hero Shot + CTA → mid. Story closing merged with the active CTA style's urgency (see CTA MERGE RULE above).`
     : `- Hook → LOWER end. Short, punchy, stops scroll. VO competes with overlay — keep it tight.
-- Reveal → low-to-mid. Let the visual breathe. One punchy line of awe or curiosity.
-- Demo → UPPER end. Describe exactly what's happening visually — texture, sensation, result.
-- Benefit → UPPER end. Emotional payoff. Make them feel the transformation.
-- Social Proof → mid. Genuine, unscripted reaction. Like texting a friend about a find.
+- Problem → low-to-mid. State the pain clearly and specifically, no fluff.
+- Agitate → mid-to-upper. Let the frustration land emotionally — enough words to make it felt, not just stated.
+- Solution → mid-to-upper. Introduce the product as the direct answer — connect it back to the exact problem just named.
+- Benefit/Proof → UPPER end. Emotional payoff. Make them feel the transformation, with a concrete detail as proof.
+- Social Proof/Testimonial → mid. Genuine, unscripted reaction. Like texting a friend about a find.
+- Urgency/Offer → mid. Real reason to act now, tied to the active CTA style's framing.
 - CTA → mid. Soft, natural. Never salesy. Platform action woven in casually.`;
 
   const sys=`You are OMNI FLASH AFFILIATE ENGINE v4.0 – CINEMATIC AI STUDIO EDITION.
@@ -1538,7 +1662,15 @@ CONSISTENCY MANDATE ACROSS ALL SCENES:
 - If the product image shows any wear, imperfection, or specific real-world detail, it's fine to smooth minor lighting but NEVER change the core identity (color/shape/branding) of the product
 - When writing each scene's visual_prompt.subject, explicitly restate the key visual identifiers (e.g. "the matte forest green bottle with rose-gold cap, exactly as shown, ...") so downstream image/video generators stay anchored to the real product across every single clip
 
+${selectedBuyingMotive?`=========================================================
+BUYING MOTIVE — PSYCHOLOGICAL ANCHOR FOR THIS VIDEO (USER-SELECTED)
 =========================================================
+The person creating this video has analyzed the product and specifically chosen this as the core psychological reason people buy it:
+"${selectedBuyingMotive}"
+
+This motive MUST anchor the Hook and Problem/Agitate scenes — the pain point, the framing, the emotional entry point should all trace back to this exact motive, not a generic assumption. Do not ignore this or substitute a different angle for the emotional core of the video; the marketing angle below determines HOW you frame the story, but this motive determines WHAT emotional truth the story is built on.
+
+`:''}=========================================================
 MARKETING ANGLE — pick ONE, never repeat
 =========================================================
 Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use
