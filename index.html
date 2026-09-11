@@ -183,7 +183,7 @@ select option{background:#1a1a26;}
     <div class="field"><label>Deskripsi singkat</label><textarea id="vp-desc" placeholder="Auto-fill setelah analisis, atau isi manual"></textarea></div>
     <div class="field" id="motive-section">
       <label>Buying Motive <span style="color:var(--muted);font-size:11px;">(opsional — anchor psikologis kenapa orang mau beli)</span></label>
-      <button class="analyze-btn" id="motive-analyze-btn" onclick="analyzeBuyingMotive()" type="button" style="margin-bottom:8px;">&#129504; Analisa Buying Motive</button>
+      <button class="analyze-btn vis" id="motive-analyze-btn" onclick="analyzeBuyingMotive()" type="button" style="margin-bottom:8px;">&#129504; Analisa Buying Motive</button>
       <div id="motive-chips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
       <div id="motive-selected-info" style="display:none;font-size:12px;color:var(--success);margin-top:6px;">✓ Motif terpilih: <strong id="motive-selected-text"></strong> <span style="color:var(--muted);cursor:pointer;text-decoration:underline;" onclick="clearMotive()">(hapus)</span></div>
       <div class="hint" style="font-size:11px;color:var(--muted);margin-top:4px;">AI akan analisa produk lalu kasih 8-15 alasan psikologis spesifik kenapa orang mau beli. Pilih satu untuk jadi fokus utama Hook &amp; Problem di video ini — kalau tidak dipilih, AI akan tentukan sendiri seperti biasa.</div>
@@ -263,7 +263,7 @@ select option{background:#1a1a26;}
     <div>
       <div class="slabel">Durasi Video</div>
       <div style="display:flex;gap:8px;align-items:center;">
-        <input type="text" id="v-dur-input" value="15" style="width:70px;text-align:center;font-weight:700;font-size:15px;" onchange="setDurFromInput()" oninput="setDurFromInput()">
+        <input type="text" id="v-dur-input" value="15" style="width:70px;text-align:center;font-weight:700;font-size:15px;" onchange="setDurFromInput(true)" oninput="setDurFromInput(false)">
         <span style="font-size:13px;color:var(--muted);">detik total</span>
       </div>
       <div class="pill-group" id="v-dur" style="margin-top:8px;">
@@ -752,9 +752,18 @@ makePills('v-dur',v=>{
   if(inp) inp.value=vDur;
   updateSI();
 });
-function setDurFromInput(){
+function setDurFromInput(isFinal){
   const inp=document.getElementById('v-dur-input');
-  let n=parseInt((inp?.value||'').replace(/[^\d]/g,''));
+  const raw=(inp?.value||'').replace(/[^\d]/g,'');
+  let n=parseInt(raw);
+  if(!isFinal){
+    // Real-time (oninput/keystroke): update the live vDur value if it's a usable number,
+    // but NEVER rewrite inp.value here — that's what was force-resetting the field to "4"
+    // every time the user tried to clear it or type a new number.
+    if(n&&n>=1) { vDur=n; updateSI(); }
+    return;
+  }
+  // Final (onchange/blur): NOW clamp to sane bounds and write the corrected value back.
   if(!n||n<4) n=4; // minimum sensible duration
   if(n>90) n=90; // sanity cap — realistic ceiling for short-form affiliate video ads
   vDur=n;
