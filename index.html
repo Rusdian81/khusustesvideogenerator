@@ -52,6 +52,7 @@ select option{background:#1a1a26;}
 .upload-zone.has-img{border-color:var(--success);border-style:solid;}
 .upload-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 .upload-preview{width:100%;max-height:110px;object-fit:contain;border-radius:6px;margin-bottom:6px;display:none;}
+video.upload-preview{background:#000;}
 .upload-icon{font-size:20px;color:var(--muted);margin-bottom:3px;}
 .upload-lbl{font-size:12px;color:var(--muted);}
 .upload-lbl strong{color:var(--accent);}
@@ -162,6 +163,7 @@ select option{background:#1a1a26;}
 <div class="main-tabs">
   <div class="main-tab active" onclick="switchTab('video')">&#9654;&nbsp; Video Prompt</div>
   <div class="main-tab" onclick="switchTab('image')">&#9670;&nbsp; Image Prompt</div>
+  <div class="main-tab" onclick="switchTab('duplicate')">&#128257;&nbsp; Duplicate Konten</div>
 </div>
 <main>
 
@@ -181,13 +183,6 @@ select option{background:#1a1a26;}
     </div>
     <div class="field"><label>Nama produk</label><input type="text" id="vp-name" placeholder="Auto-fill setelah analisis, atau isi manual"></div>
     <div class="field"><label>Deskripsi singkat</label><textarea id="vp-desc" placeholder="Auto-fill setelah analisis, atau isi manual"></textarea></div>
-    <div class="field" id="motive-section">
-      <label>Buying Motive <span style="color:var(--muted);font-size:11px;">(opsional — anchor psikologis kenapa orang mau beli)</span></label>
-      <button class="analyze-btn vis" id="motive-analyze-btn" onclick="analyzeBuyingMotive()" type="button" style="margin-bottom:8px;">&#129504; Analisa Buying Motive</button>
-      <div id="motive-chips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-      <div id="motive-selected-info" style="display:none;font-size:12px;color:var(--success);margin-top:6px;">✓ Motif terpilih: <strong id="motive-selected-text"></strong> <span style="color:var(--muted);cursor:pointer;text-decoration:underline;" onclick="clearMotive()">(hapus)</span></div>
-      <div class="hint" style="font-size:11px;color:var(--muted);margin-top:4px;">AI akan analisa produk lalu kasih 8-15 alasan psikologis spesifik kenapa orang mau beli. Pilih satu untuk jadi fokus utama Hook &amp; Problem di video ini — kalau tidak dipilih, AI akan tentukan sendiri seperti biasa.</div>
-    </div>
     <div class="field" id="edu-topic-field" style="display:none;">
       <label>Topik edukasi <span style="color:var(--success);font-size:11px;">(opsional jika ada produk)</span></label>
       <input type="text" id="edu-topic" placeholder="cth: Manfaat vitamin C untuk kulit, Tips memilih skincare...">
@@ -262,19 +257,12 @@ select option{background:#1a1a26;}
     </div>
     <div>
       <div class="slabel">Durasi Video</div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input type="text" id="v-dur-input" value="15" style="width:70px;text-align:center;font-weight:700;font-size:15px;" onchange="setDurFromInput(true)" oninput="setDurFromInput(false)">
-        <span style="font-size:13px;color:var(--muted);">detik total</span>
-      </div>
-      <div class="pill-group" id="v-dur" style="margin-top:8px;">
+      <div class="pill-group" id="v-dur">
         <div class="pill dur" data-val="10">10s</div>
         <div class="pill dur active" data-val="15">15s</div>
         <div class="pill dur" data-val="25">25s</div>
         <div class="pill dur" data-val="30">30s</div>
-        <div class="pill dur" data-val="45">45s</div>
-        <div class="pill dur" data-val="60">60s</div>
       </div>
-      <div class="hint" style="font-size:11px;color:var(--muted);margin-top:4px;">Ketik durasi custom di atas (mis. 40, 90) — makin panjang durasi, makin banyak scene &amp; makin lengkap alur ceritanya (Hook → Problem → Agitate → Solution → Benefit → Social Proof → Urgency → CTA).</div>
     </div>
     <div>
       <div class="slabel">Platform Video Generator</div>
@@ -348,6 +336,95 @@ select option{background:#1a1a26;}
     <button class="btn-gen" id="i-btn" onclick="generateImage()">Generate Image Prompts</button>
   </div>
   <div class="panel-right" id="i-out"><div class="out-ph"><div class="ic">&#9670;</div><p>Upload produk dan isi detail untuk generate image prompt.</p></div></div>
+</div>
+
+<!-- DUPLICATE KONTEN TAB -->
+<div class="tab-panel" id="tab-duplicate">
+  <div class="panel-left">
+    <div style="background:rgba(124,92,252,.06);border:1px solid rgba(124,92,252,.18);border-radius:var(--radius);padding:10px 13px;font-size:12px;color:#b0b0cc;line-height:1.5;">
+      &#128257; Upload video referensi (misal video Alibaba/viral) — AI akan analisa struktur shot-nya (angle kamera, gerakan, blocking, pacing, transisi) lalu bikinin JSON prompt baru dengan struktur yang sama, tapi pakai produk &amp; talent kamu sendiri.
+    </div>
+    <div>
+      <div class="slabel">Upload Video Referensi</div>
+      <div class="upload-zone" id="dupref-zone">
+        <input type="file" id="dupref-file" accept="video/mp4,video/quicktime,video/webm" onchange="handleVideoUpload(event,'dupref')">
+        <div class="upload-icon">&#127909;</div>
+        <div class="upload-lbl" id="dupref-lbl"><strong>Klik atau drag</strong> video referensi (max 18MB)</div>
+        <video class="upload-preview" id="dupref-prev" muted loop playsinline></video>
+      </div>
+      <div class="hint" id="dupref-size" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+    </div>
+    <div>
+      <div class="slabel">Upload Produk Kamu</div>
+      <div class="upload-zone" id="dupp-zone">
+        <input type="file" id="dupp-file" accept="image/*" onchange="handleUpload(event,'dupp')">
+        <div class="upload-icon">&#128247;</div>
+        <div class="upload-lbl" id="dupp-lbl"><strong>Klik atau drag</strong> foto produk kamu</div>
+        <img class="upload-preview" id="dupp-prev">
+      </div>
+      <button class="analyze-btn" id="dupp-analyze" onclick="analyzeDupProduct()">&#128269; Analisis Produk dengan AI</button>
+      <div class="ai-result" id="dupp-airesult"><div class="ai-tag">AI Detected</div><div id="dupp-aitext"></div></div>
+    </div>
+    <div class="field"><label>Nama produk</label><input type="text" id="dupp-name" placeholder="Auto-fill setelah analisis, atau isi manual"></div>
+    <div class="field"><label>Deskripsi singkat</label><textarea id="dupp-desc" placeholder="Auto-fill setelah analisis, atau isi manual"></textarea></div>
+    <div>
+      <div class="slabel">Upload Talent (opsional)</div>
+      <div class="upload-zone" id="dupt-zone">
+        <input type="file" id="dupt-file" accept="image/*" onchange="handleUpload(event,'dupt')">
+        <div class="upload-icon">&#128100;</div>
+        <div class="upload-lbl" id="dupt-lbl"><strong>Klik atau drag</strong> foto talent (kosongkan untuk ikut talent di video referensi)</div>
+        <img class="upload-preview" id="dupt-prev">
+      </div>
+      <div class="field" style="margin-top:7px;"><label>Atau deskripsikan talent</label><input type="text" id="dupt-text" placeholder="cth: Wanita 25th, kulit cerah, casual style — kosongkan untuk ikut talent referensi"></div>
+    </div>
+    <div class="divider"></div>
+    <div>
+      <div class="slabel">Target & Bahasa</div>
+      <div class="grid-2">
+        <div class="field"><label>Negara</label>
+          <select id="dup-country"><option>Indonesia</option><option>Malaysia</option><option>Singapore</option><option>Thailand</option><option>Philippines</option></select>
+        </div>
+        <div class="field"><label>Platform sosial</label>
+          <select id="dup-platform"><option>TikTok</option><option>Instagram Reels</option><option>YouTube Shorts</option><option>Shopee Video</option><option>General</option></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Gaya CTA</label>
+        <select id="dup-cta-style">
+          <option value="standard">Standard — langsung ke action platform</option>
+          <option value="value_anchor">Value Anchor — fokus ke nilai & manfaat yang didapat</option>
+          <option value="community_pull">Community Pull — banyak yang pakai, join bareng</option>
+          <option value="social_proof">Social Proof — rating & review tinggi</option>
+          <option value="discovery">Discovery — framing menemukan sesuatu baru</option>
+          <option value="soft_recommend">Soft Recommend — rekomendasi tanpa pressure</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.15);border-radius:var(--radius);padding:9px 13px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:#b0b0cc;margin:0;">
+        <input type="checkbox" id="dup-follow-structure" checked style="width:15px;height:15px;accent-color:var(--success);cursor:pointer;">
+        <span>Ikuti struktur asli</span>
+      </label>
+      <span style="font-size:11px;color:var(--muted);flex:1;">Jumlah scene & pacing ngikutin video referensi persis. Matikan untuk atur durasi manual.</span>
+    </div>
+    <div id="dup-manual-dur" style="display:none;">
+      <div class="slabel">Durasi Video (manual)</div>
+      <div class="pill-group" id="dup-dur">
+        <div class="pill dur" data-val="10">10s</div>
+        <div class="pill dur active" data-val="15">15s</div>
+        <div class="pill dur" data-val="25">25s</div>
+        <div class="pill dur" data-val="30">30s</div>
+      </div>
+      <div class="slabel" style="margin-top:8px;">Detik per Scene</div>
+      <div style="display:flex;gap:8px;" id="dup-platforms">
+        <div class="pcard active" data-val="6s" data-s="6" style="flex:1;padding:10px 6px;"><div class="pn">6 detik</div><div class="pd">per scene</div></div>
+        <div class="pcard" data-val="8s" data-s="8" style="flex:1;padding:10px 6px;"><div class="pn">8 detik</div><div class="pd">per scene</div></div>
+        <div class="pcard" data-val="10s" data-s="10" style="flex:1;padding:10px 6px;"><div class="pn">10 detik</div><div class="pd">per scene</div></div>
+      </div>
+    </div>
+    <button class="btn-gen" id="dup-btn" onclick="generateDuplicate()" style="font-size:13px;background:linear-gradient(135deg,#7c5cfc,#fc5c7d);">&#128257; Duplikasi Struktur Video</button>
+  </div>
+  <div class="panel-right" id="dup-out"><div class="out-ph"><div class="ic">&#128257;</div><p>Upload video referensi + foto produk kamu, lalu klik Duplikasi Struktur Video.</p></div></div>
 </div>
 </main>
 
@@ -599,7 +676,7 @@ let iStyle="Commercial Editorial",iRatio="9:16";
 const LANG={Indonesia:"Bahasa Indonesia",Malaysia:"Bahasa Malaysia",Singapore:"Singapore English",Thailand:"Thai",Philippines:"Filipino English"};
 
 function switchTab(t){
-  document.querySelectorAll('.main-tab').forEach((el,i)=>el.classList.toggle('active',['video','image'][i]===t));
+  document.querySelectorAll('.main-tab').forEach((el,i)=>el.classList.toggle('active',['video','image','duplicate'][i]===t));
   document.querySelectorAll('.tab-panel').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
 }
@@ -615,8 +692,60 @@ function handleUpload(e,key){
     document.getElementById(key+'-zone').classList.add('has-img');
     document.getElementById(key+'-lbl').innerHTML='<strong>'+f.name+'</strong> — klik ganti';
     if(key==='vp') document.getElementById('vp-analyze').classList.add('vis');
+    if(key==='dupp') document.getElementById('dupp-analyze').classList.add('vis');
   };
   r.readAsDataURL(f);
+}
+
+// Video reference upload — dipakai di tab Duplicate Konten. Gemini generateContent bisa terima
+// video langsung sebagai inlineData (mime video/mp4 dll) selama total request < 20MB, jadi kita
+// kasih batas aman 18MB di sisi klien biar nggak kelebihan sama system prompt + gambar produk.
+const DUP_VIDEO_MAX_MB=18;
+function handleVideoUpload(e,key){
+  const f=e.target.files[0]; if(!f) return;
+  const sizeMB=f.size/(1024*1024);
+  const sizeEl=document.getElementById(key+'-size');
+  if(sizeMB>DUP_VIDEO_MAX_MB){
+    if(sizeEl) sizeEl.innerHTML='<span style="color:#E24B4A;">File '+sizeMB.toFixed(1)+'MB — terlalu besar (max '+DUP_VIDEO_MAX_MB+'MB). Trim video atau kompres dulu.</span>';
+    e.target.value='';
+    return;
+  }
+  if(sizeEl) sizeEl.innerHTML='<span style="color:var(--success);">'+sizeMB.toFixed(1)+'MB — OK</span>';
+  const r=new FileReader();
+  r.onload=()=>{
+    const b64=r.result.split(',')[1];
+    b64store[key]={data:b64,mime:f.type||'video/mp4'};
+    const prev=document.getElementById(key+'-prev');
+    prev.src='data:'+(f.type||'video/mp4')+';base64,'+b64;
+    prev.style.display='block';
+    document.getElementById(key+'-zone').classList.add('has-img');
+    document.getElementById(key+'-lbl').innerHTML='<strong>'+f.name+'</strong> — klik ganti';
+  };
+  r.readAsDataURL(f);
+}
+
+async function analyzeDupProduct(){
+  if(!b64store.dupp){alert('Upload foto produk dulu!');return;}
+  const btn=document.getElementById('dupp-analyze');
+  btn.disabled=true; btn.textContent='Menganalisis...';
+  try{
+    const key=getKey();
+    const parts=[
+      {type:'image',source:{media_type:b64store.dupp.mime,data:b64store.dupp.data}},
+      {type:'text',text:'Analyze this product image. Return ONLY JSON (no markdown): {"product_name":"","description":"1-2 sentences on function and key features","category":"","target_audience":""}'}
+    ];
+    const data=await geminiWithRetry(key,null,parts);
+    if(data.error){alert('Gemini API Error: '+data.error.message);btn.disabled=false;btn.textContent='🔍 Analisis Produk dengan AI';return;}
+    let raw=geminiText(data);
+    if(!raw){alert('Response kosong dari Gemini. Coba lagi.');btn.disabled=false;btn.textContent='🔍 Analisis Produk dengan AI';return;}
+    raw=extractJSON(raw);
+    const info=JSON.parse(raw);
+    document.getElementById('dupp-name').value=info.product_name||'';
+    document.getElementById('dupp-desc').value=info.description||'';
+    document.getElementById('dupp-airesult').classList.add('vis');
+    document.getElementById('dupp-aitext').textContent=(info.category?info.category+' • ':'')+(info.target_audience||'');
+  }catch(err){alert('Error: '+err.message);}
+  btn.disabled=false; btn.textContent='🔍 Analisis Produk dengan AI';
 }
 
 async function analyzeProduct(){
@@ -658,75 +787,6 @@ function makePills(groupId,cb){
     p.onclick=()=>{document.querySelectorAll('#'+groupId+' .pill').forEach(x=>x.classList.remove('active'));p.classList.add('active');cb(p.dataset.val);};
   });
 }
-
-// ── BUYING MOTIVE ────────────────────────────────────────────
-// Optional layer: AI generates 8-15 SPECIFIC psychological reasons why someone buys THIS
-// product (not generic Fear/Desire labels — actual sentences tied to this product). User
-// picks one, and it becomes the anchor for Hook/Problem/Agitate in the final generation.
-let selectedBuyingMotive='';
-async function analyzeBuyingMotive(){
-  const name=document.getElementById('vp-name').value.trim();
-  const desc=document.getElementById('vp-desc').value.trim();
-  if(!name){alert('Isi Nama Produk dulu (atau jalankan Analisis Produk dengan AI).');return;}
-  const btn=document.getElementById('motive-analyze-btn');
-  btn.disabled=true; btn.textContent='Menganalisis motif...';
-  document.getElementById('motive-chips').innerHTML='';
-  try{
-    const key=getKey();
-    const prompt=`Kamu adalah Meta Ads Creative Strategist. Setiap creative harus dibangun dari psikologi pembeli (buying motive) dulu, sebelum eksekusi.
-
-PRODUK: ${name}
-DESKRIPSI: ${desc||'-'}
-
-TUGAS: Tentukan buying motive paling relevan untuk produk ini — alasan psikologis KENAPA orang mau beli (bukan fitur produk). Minimal 8, maksimal 15 motif. Boleh terinspirasi kategori seperti Fear, Desire, Convenience, Financial, Status, Family, Career, Lifestyle, Emotion, Security, Health, Confidence, Social Proof, Urgency, Curiosity — tapi tulis SPESIFIK ke produk ini, bukan generic/template.
-
-WAJIB balas HANYA dengan JSON array of string, tanpa markdown/backtick/penjelasan tambahan. Tiap string maksimal 12 kata.`;
-    const parts=[{type:'text',text:prompt}];
-    const data=await geminiWithRetry(key,null,parts);
-    if(data.error){
-      alert('Gemini API Error: '+data.error.message);
-      btn.disabled=false; btn.textContent='🧠 Analisa Buying Motive'; return;
-    }
-    let raw=geminiText(data);
-    if(!raw){
-      alert('Response kosong dari Gemini. Coba lagi.');
-      btn.disabled=false; btn.textContent='🧠 Analisa Buying Motive'; return;
-    }
-    raw=extractJSON(raw);
-    const motives=JSON.parse(raw);
-    renderMotiveChips(motives);
-    btn.textContent='🧠 Re-analisa Buying Motive';
-  }catch(err){
-    alert('Error: '+err.message);
-    btn.textContent='🧠 Analisa Buying Motive';
-  }
-  btn.disabled=false;
-}
-function renderMotiveChips(motives){
-  const container=document.getElementById('motive-chips');
-  container.innerHTML='';
-  if(!Array.isArray(motives)) return;
-  motives.forEach(m=>{
-    const chip=document.createElement('div');
-    chip.className='pill';
-    chip.style.cssText='border-color:rgba(124,92,252,.35);';
-    chip.textContent=m;
-    chip.onclick=()=>selectMotive(m,chip);
-    container.appendChild(chip);
-  });
-}
-function selectMotive(motive,chipEl){
-  selectedBuyingMotive=motive;
-  document.querySelectorAll('#motive-chips .pill').forEach(c=>c.classList.remove('active'));
-  chipEl.classList.add('active');
-  document.getElementById('motive-selected-info').style.display='';
-  document.getElementById('motive-selected-text').textContent=motive;
-}
-function clearMotive(){
-  selectedBuyingMotive='';
-  document.querySelectorAll('#motive-chips .pill').forEach(c=>c.classList.remove('active'));
-  document.getElementById('motive-selected-info').style.display='none';
-}
 makePills('v-style',v=>{
   vStyle=v;
   const isEdu = v==='Edukasi';
@@ -746,34 +806,7 @@ makePills('v-style',v=>{
   // Edukasi: sembunyikan platform sosial (tidak ada CTA = tidak perlu platform)
   // Tapi tetap tampilkan untuk keperluan bahasa
 });
-makePills('v-dur',v=>{
-  vDur=parseInt(v);
-  const inp=document.getElementById('v-dur-input');
-  if(inp) inp.value=vDur;
-  updateSI();
-});
-function setDurFromInput(isFinal){
-  const inp=document.getElementById('v-dur-input');
-  const raw=(inp?.value||'').replace(/[^\d]/g,'');
-  let n=parseInt(raw);
-  if(!isFinal){
-    // Real-time (oninput/keystroke): update the live vDur value if it's a usable number,
-    // but NEVER rewrite inp.value here — that's what was force-resetting the field to "4"
-    // every time the user tried to clear it or type a new number.
-    if(n&&n>=1) { vDur=n; updateSI(); }
-    return;
-  }
-  // Final (onchange/blur): NOW clamp to sane bounds and write the corrected value back.
-  if(!n||n<4) n=4; // minimum sensible duration
-  if(n>90) n=90; // sanity cap — realistic ceiling for short-form affiliate video ads
-  vDur=n;
-  if(inp) inp.value=n;
-  // Sync pill active state — highlight matching pill if value matches a quick-select, else deselect all
-  document.querySelectorAll('#v-dur .pill.dur').forEach(p=>{
-    p.classList.toggle('active', parseInt(p.dataset.val)===n);
-  });
-  updateSI();
-}
+makePills('v-dur',v=>{vDur=parseInt(v);updateSI();});
 
 // ── License gate ──
 (function(){
@@ -862,13 +895,27 @@ document.querySelectorAll('#v-platforms .pcard').forEach(p=>{
   };
 });
 
+// ── DUPLICATE KONTEN TAB WIRING ──
+let dupDur=15, dupScene=6;
+makePills('dup-dur',v=>{dupDur=parseInt(v);});
+document.querySelectorAll('#dup-platforms .pcard').forEach(p=>{
+  p.onclick=()=>{
+    document.querySelectorAll('#dup-platforms .pcard').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    dupScene=parseInt(p.dataset.s)||6;
+  };
+});
+document.getElementById('dup-follow-structure')?.addEventListener('change',(e)=>{
+  document.getElementById('dup-manual-dur').style.display=e.target.checked?'none':'';
+});
+
 function updateSI(){
   const c=Math.max(1,Math.ceil(vDur/vScene));
   document.getElementById('sc-count').textContent=c+' scenes';
   document.getElementById('sc-dur').textContent=vDur+'s';
   document.getElementById('sc-per').textContent=vScene+'s/scene';
 }
-function scCount(){return Math.max(1,Math.min(12,Math.ceil(vDur/vScene)));}
+function scCount(){return Math.max(1,Math.ceil(vDur/vScene));}
 function purposes(n){
   if(vStyle==='Factory Crisis'){
     // Priority hierarchy (locked): Factory Validation (always #1) → Crisis Hook → Internal Pressure → QC Pass → Clearance Logic → CTA Loop (always last)
@@ -899,38 +946,19 @@ function purposes(n){
     rEdu.push('Key Takeaway');
     return rEdu;
   }
-  // Default funnel (used by all simple + additive styles — Factory Crisis/Anomali/Edukasi keep
-  // their own dedicated structure above, untouched). This scales properly with scene count
-  // instead of generically cycling the same 4 labels — makin banyak scene, makin lengkap
-  // "amunisi psikologis" sebelum CTA (Hook → Problem → Agitate → Solution → Benefit/Proof →
-  // Social Proof/Testimonial → Urgency/Offer → CTA), bukan cuma diulang-ulang.
-  if(n===1) return['Hook + CTA'];
-  const FUNNEL_MAP={
-    2: ['Hook', 'Solution + CTA'],
-    3: ['Hook', 'Problem', 'Solution + CTA'],
-    4: ['Hook', 'Problem', 'Solution', 'CTA'],
-    5: ['Hook', 'Problem', 'Agitate', 'Solution', 'CTA'],
-    6: ['Hook', 'Problem', 'Agitate', 'Solution', 'Benefit/Proof', 'CTA'],
-    7: ['Hook', 'Problem', 'Agitate', 'Solution', 'Benefit/Proof', 'Social Proof/Testimonial', 'CTA'],
-    8: ['Hook', 'Problem', 'Agitate', 'Solution', 'Benefit/Proof', 'Social Proof/Testimonial', 'Urgency/Offer', 'CTA'],
-  };
-  if(FUNNEL_MAP[n]) return FUNNEL_MAP[n];
-  // Beyond 8 scenes (now possible with typed custom duration): extend by cycling extra
-  // supporting beats before the final CTA, keeping Hook first and CTA last always locked.
-  const base=FUNNEL_MAP[8].slice(0,-1); // everything except CTA
-  const extraCycle=['Benefit/Proof','Social Proof/Testimonial'];
-  const extended=[...base];
-  let i=0;
-  while(extended.length < n-1){ extended.push(extraCycle[i%extraCycle.length]); i++; }
-  extended.push('CTA');
-  return extended;
+  if(n===1)return['Hook + CTA'];
+  if(n===2)return['Hook','CTA'];
+  const mid=['Reveal','Demo','Benefit','Social Proof'];
+  const r=['Hook'];
+  for(let i=0;i<n-2;i++)r.push(mid[i%mid.length]);
+  r.push('CTA'); return r;
 }
 
 function loadingHTML(s){return`<div style="display:flex;flex-direction:column;gap:11px;padding:6px 0;"><div class="lbar on"><div class="lbar-in"></div></div><div class="stxt on" id="stxt">${s}</div></div>`;}
 function startCycle(arr){let i=0;return setInterval(()=>{i=(i+1)%arr.length;const el=document.getElementById('stxt');if(el)el.textContent=arr[i];},1900);}
 
 // ── VIDEO GENERATE ──
-function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType,isAnomaly,anomalyEnemy){
+function buildSystemPrompt(country,social,scOverride,psOverride,isHerbal,isEdukasi,ctaStyleKey,isFactoryCrisis,crisisType,isAnomaly,anomalyEnemy,isDuplicate,dupFollowStructure){
   const sc=scOverride||scCount(), ps=psOverride||purposes(sc), lang=LANG[country];
   // Per-region colloquial speech guide — prevents VO from sounding formal/textbook/English-translated,
   // which is what causes voice references/TTS to come out with an English-influenced accent.
@@ -1296,6 +1324,38 @@ BANNED IN THIS MODE:
 - No generic "product review" VO phrasing — always storyteller narration
 `:'';
 
+  const duplicateBlock=isDuplicate?`
+=========================================================
+DUPLICATE KONTEN MODE — MANDATORY RULES (OVERRIDES DEFAULT CONTENT STYLE DNA)
+=========================================================
+A REFERENCE VIDEO has been attached directly to this request (as inline video data, alongside the product image). Your primary job in this mode is SHOT-STRUCTURE CLONING, not generic ad creation.
+
+STEP 1 — ANALYZE THE REFERENCE VIDEO FIRST (internal reasoning, do not output this analysis):
+Watch the attached reference video carefully and identify:
+- The exact number of distinct shots/scenes (count actual cuts/transitions, not narration beats)
+- For EACH shot: camera angle (eye-level, low, high, overhead), camera movement (static, handheld, dolly, pan, whip, push-in), subject blocking/action (what the person/product physically does), framing (close-up, medium, wide), pacing (how long each shot holds), and environment/setting type
+- Any transition style between shots (hard cut, whip pan, match cut, zoom transition)
+- Overall narrative rhythm — does it build curiosity then reveal, or show-then-explain, or a physical demonstration sequence?
+- Whether there's an on-screen talent, and if so, their general action pattern (not their identity/likeness — never replicate a real person's face/identity, only their ROLE and ACTION in the shot)
+
+STEP 2 — RECREATE THE SAME SHOT STRUCTURE WITH THE NEW PRODUCT:
+- Generate scenes that mirror the reference video's actual shot count, camera language, blocking, and pacing AS CLOSELY AS POSSIBLE — this is a structural clone, not a loose inspiration
+- Replace whatever product appeared in the reference with THIS user's own product (provided as a separate image) — same physical actions/demonstrations, same camera treatment, different product
+- If a talent image or description was provided by the user, feature that talent performing the same role/actions as the reference video's talent. If NO talent was provided, describe a natural talent matching the reference video's general demographic/role (e.g. "young adult, casual home setting") WITHOUT copying any specific real person's identity/likeness — invent a generic natural-looking talent that fits the same role.
+- Environment/setting should match the reference's type of location (e.g. home entryway, bedroom, kitchen) — recreate the SETTING TYPE, not attempt to reproduce the literal reference footage
+- ${dupFollowStructure?`Scene count MUST match the reference video's actual detected shot count as closely as possible — this overrides the requested ${sc}-scene default; use your own count based on what you observed in the video.`:`The user has requested a specific total duration/scene count (${sc} scenes) different from the reference's natural length — intelligently compress or expand the reference's shot structure to fit this count while preserving its camera language and pacing DNA as much as possible.`}
+
+CRITICAL — WHAT TO CLONE VS WHAT TO CHANGE:
+CLONE (keep identical to reference): camera angles, camera movement type, shot framing/composition, subject blocking/physical action pattern, pacing rhythm, transition style, number of distinct scenes, overall narrative structure/beat order
+CHANGE (must be different from reference): the actual product (use the user's product), the talent's specific identity/face (use provided talent or an invented generic one — never claim to be or resemble a specific real identifiable person from the reference video), text overlay language (use the target country/language rules), VO script content (must reference the NEW product's real details, not the reference product's)
+
+VOICE OVER: follow the standard native-language/tone rules elsewhere in this prompt, but the VO's factual content must be entirely about the NEW product provided by the user — do not carry over any specific claims/features from whatever product was in the reference video.
+
+OVERLAY DESIGN: follow the standard overlay_design schema; badge/headline text should be authored fresh for the new product, not copied from any text that may have appeared in the reference video.
+
+CTA: apply normally per the CTA rules elsewhere in this prompt — the reference video's own CTA (if any) is not binding; use the platform/CTA style selected for this generation.
+`:'';
+
   // ── STYLE VARIANT DNA ──────────────────────────────────────────────
   // These 7 styles ADD guidance on top of the standard Hook/Reveal/Demo/Benefit/Social Proof/CTA
   // scene structure and the standard JSON output schema. Unlike Factory Crisis/Edukasi, they do
@@ -1460,23 +1520,27 @@ CAMERA/MOTION: handheld micro-shake throughout, natural arm-length selfie moveme
     ? 'Quality: Raw realistic leaked internal footage — handheld, natural imperfection, NOT polished 8K commercial'
     : isAnomaly
     ? 'Quality: Ultra realistic 8K photoreal environment with premium 3D CGI character render composited in — Pixar/DreamWorks character quality'
+    : isDuplicate
+    ? 'Quality: match the visual quality/realism level observed in the attached reference video — do not upgrade to generic premium-commercial polish if the reference looks raw/native, and vice versa'
     : 'Quality: Ultra realistic 8K';
   const sceneDnaBlock=isFactoryCrisis
-    ? `(Use the SCENE PURPOSE DNA defined in the FACTORY CRISIS MODE section above — Factory Validation / Crisis Hook / Internal Pressure / QC Pass / Clearance Logic / CTA Loop. Do NOT use the default Hook/Problem/Agitate/Solution/Benefit-Proof/Social-Proof/Urgency/CTA DNA below, it does not apply to this style.)`
+    ? `(Use the SCENE PURPOSE DNA defined in the FACTORY CRISIS MODE section above — Factory Validation / Crisis Hook / Internal Pressure / QC Pass / Clearance Logic / CTA Loop. Do NOT use Hook/Reveal/Demo/Benefit/Social Proof DNA below, it does not apply to this style.)`
     : isAnomaly
-    ? `(Use the SCENE PURPOSE DNA defined in the ANOMALI MASCOT MODE section above — Anomaly Discovery / Conflict Setup / Struggle Moment / Turning Point / Victory / Product Hero Shot + CTA. Do NOT use the default Hook/Problem/Agitate/Solution/Benefit-Proof/Social-Proof/Urgency/CTA DNA below, it does not apply to this style.)`
+    ? `(Use the SCENE PURPOSE DNA defined in the ANOMALI MASCOT MODE section above — Anomaly Discovery / Conflict Setup / Struggle Moment / Turning Point / Victory / Product Hero Shot + CTA. Do NOT use Hook/Reveal/Demo/Benefit/Social Proof DNA below, it does not apply to this style.)`
+    : isDuplicate
+    ? `(Do NOT use the default Hook/Reveal/Demo/Benefit/Social Proof DNA below — instead, assign each scene's "purpose" label based on what that specific shot is actually doing in the analyzed reference video, e.g. "Opening Shot", "Product Reveal", "Demonstration", "Close-up Detail", "Result Shot" — label purposes descriptively based on the reference's actual shot content, in the same order as the reference video.)`
     : `Hook → Pattern interrupt, extreme close-up or shocking visual, zero context drop, stops scroll
-Problem → State the specific pain/frustration the viewer relates to — grounded in a real situation, not abstract. Visual: the problem itself, or a relatable moment of struggle/annoyance.
-Agitate → Deepen the pain point emotionally — what it costs them, how long they've dealt with it, why past attempts failed. Visual: frustration intensifying, the problem's real-world consequence shown.
-Solution → Product enters as the clear answer to the problem just established — hero product shot, dynamic movement, premium lighting, direct connection back to the pain point.
-Benefit/Proof → Concrete result/transformation the product delivers — lifestyle visualization, tangible payoff, specific proof point (not vague feeling).
-Social Proof/Testimonial → Third-party validation feel — reactions, testimonial energy, before/after moment, "other people already found this works."
-Urgency/Offer → Reason to act now — genuine urgency/offer framing tied to the CTA style rules above (never fabricated scarcity unless CTA style explicitly allows it).
+Reveal → Hero product shot, dynamic movement, premium lighting
+Demo → Macro/extreme close-up of product in use, hands-on demonstration
+Benefit → Lifestyle visualization, transformation, emotional payoff
+Social Proof → Testimonial feel, reactions, before/after moment
 CTA → Hero push-in, luxury rim light, CTA overlay, call to action per platform rules above`;
   const cameraMoveBlock=isFactoryCrisis
     ? `(Use the CAMERA MOVEMENT RULES defined in the FACTORY CRISIS MODE section above — handheld, raw, observational. Do NOT use the dolly/orbit/luxury rules below, they do not apply to this style.)`
     : isAnomaly
     ? `(Use the CAMERA MOVEMENT RULES defined in the ANOMALI MASCOT MODE section above — scale-aware macro movement, smooth cinematic character storytelling. Do NOT use the generic dolly/orbit rules below, they do not apply to this style.)`
+    : isDuplicate
+    ? `(Do NOT use the generic dolly/orbit rules below — instead, use the EXACT camera movement you observed for each corresponding shot in the reference video: same movement type (static/handheld/dolly/pan/whip/push-in), same relative speed, same framing distance. This is the single most important cloning element.)`
     : `- Scene 1: Extreme macro push-in OR whip pan reveal OR speed ramp from black
 - Scene 2: Dolly reveal OR orbit around product OR hero tilt-up
 - Scene 3: 100mm macro with shallow DOF, slow creep forward
@@ -1486,37 +1550,49 @@ CTA → Hero push-in, luxury rim light, CTA overlay, call to action per platform
     ? '"BREAKING", "DARURAT", "INTERNAL LEAK", "STOK TERBATAS", "CLEARANCE"'
     : isAnomaly
     ? '"TERNYATA...", "MISI DIMULAI", "PELINDUNG BARU", "AKHIRNYA MENANG"'
+    : isDuplicate
+    ? '"VIRAL", "TERBUKTI", "LIMITED", "WOW" (only if overlay text style is actually present/appropriate to the reference video — if the reference had minimal/no text overlay, keep overlay minimal here too)'
     : '"VIRAL", "TERBUKTI", "LIMITED", "WOW"';
   const soundDesignBlock=isFactoryCrisis
     ? `(Use the SOUND DESIGN rules defined in the FACTORY CRISIS MODE section above — factory ambience, alarm, radio static. Do NOT use the trending-sound/beat-drop rules below, they do not apply to this style.)`
     : isAnomaly
     ? `(Use the SOUND DESIGN rules defined in the ANOMALI MASCOT MODE section above — whimsical/tension/triumphant story-driven sound. Do NOT use the trending-sound/beat-drop rules below, they do not apply to this style.)`
+    : isDuplicate
+    ? `(Match the sound design energy/type you observed or would expect from the reference video's pacing and mood — do not force generic viral-hook sound design if the reference has a calmer or more observational rhythm.)`
     : `- Scene 1: Trending sound hook / beat drop / viral audio cue
 - Scene 2: Satisfying product reveal sound (swoosh, pop, shine)
 - Scene 3: Tactile demo sound (texture, liquid, mechanism)
 - Scene 4: Uplifting music swell / emotional beat
 - Scene 5+: Climactic music peak + CTA jingle or notification sound`;
-  const editingStyleLabel=isFactoryCrisis?'Raw Internal Leak':isAnomaly?'Premium 3D Character Storytelling':'Premium Commercial';
-  const cutEveryLine=isFactoryCrisis?'1.5–3s (observational, urgent but not hype-cut)':isAnomaly?'1.2–2.5s (story pacing, let character moments breathe)':'0.8–1.5s';
+  const editingStyleLabel=isFactoryCrisis?'Raw Internal Leak':isAnomaly?'Premium 3D Character Storytelling':isDuplicate?'Cloned Reference Structure':'Premium Commercial';
+  const cutEveryLine=isFactoryCrisis?'1.5–3s (observational, urgent but not hype-cut)':isAnomaly?'1.2–2.5s (story pacing, let character moments breathe)':isDuplicate?'Match the cut timing observed in the reference video, shot by shot':'0.8–1.5s';
   const qualityRuleNote=isFactoryCrisis
     ? 'Every scene must feel like raw leaked internal footage — handheld, imperfect framing, NOT commercial polish, NOT cinematic.'
     : isAnomaly
     ? 'Every scene must blend photoreal environment with premium 3D CGI character quality — consistent creature design, correct scale/lighting/shadow integration.'
+    : isDuplicate
+    ? 'Every scene must match the visual treatment/quality level of the reference video shot-for-shot — the goal is structural fidelity to the reference, not generic premium polish.'
     : 'Every scene must resemble a premium commercial shot — 8K, cinematic, lit perfectly.';
   const voiceRuleNote=isFactoryCrisis
     ? 'Must sound like urgent breaking internal news narrated from inside the factory — never like a lifestyle creator, never like a TV commercial.'
     : isAnomaly
     ? 'Must sound like a warm third-person storyteller narrating the mascot creature\'s journey — never first-person UGC review, never a salesperson.'
+    : isDuplicate
+    ? 'Must sound natural for whatever narrative style the reference video used (demonstration voiceover, casual talk-through, or minimal narration) — match the reference\'s VO presence/absence and energy level, adapted into the new product\'s real details.'
     : 'Must sound like a genuine content creator, never like AI or a TV commercial.';
   const toneLine=isFactoryCrisis
     ? 'Tone: Breaking internal news, darurat, lisan — see FACTORY CRISIS MODE section above for full VO tone rules. Do NOT use the lifestyle-creator voice character/examples below.'
     : isAnomaly
     ? 'Tone: Warm narrative storyteller — see ANOMALI MASCOT MODE section above for full VO tone rules. Do NOT use the lifestyle-creator voice character/examples below.'
+    : isDuplicate
+    ? 'Tone: match whatever tone the reference video actually uses — see DUPLICATE KONTEN MODE section above. Do NOT use the lifestyle-creator voice character/examples below unless the reference itself is in that style.'
     : 'Natural creator, conversational, everyday speech, native local style — sounds like a REAL PERSON talking to a friend, NEVER robotic, NEVER scripted';
   const voiceCharacterBlock=isFactoryCrisis
     ? `(Skip this — Factory Crisis uses the breaking-news VO tone defined in the FACTORY CRISIS MODE section above, not a personal voice character.)`
     : isAnomaly
     ? `(Skip this — Anomali Mascot uses the third-person storyteller VO tone defined in the ANOMALI MASCOT MODE section above, not a personal voice character.)`
+    : isDuplicate
+    ? `(Skip this — Duplicate Konten mode derives its voice character from the reference video itself, defined in the DUPLICATE KONTEN MODE section above.)`
     : `VOICE CHARACTER — pick ONE that matches the marketing angle and stick to it throughout:
 - Discovery voice: "gue literally baru tau ini..." / "okay I literally just found this..."
 - Skeptic-turned-believer: "awalnya gue ragu banget, tapi..." / "I was so skeptical at first but..."
@@ -1527,6 +1603,8 @@ CTA → Hero push-in, luxury rim light, CTA overlay, call to action per platform
     ? `(Skip these examples — they are personal-review UGC language, which is BANNED in Factory Crisis mode. Use the breaking-news reference template in the FACTORY CRISIS MODE section above instead.)`
     : isAnomaly
     ? `(Skip these examples — they are personal-review UGC language, which is BANNED in Anomali Mascot mode. Use the storyteller reference template in the ANOMALI MASCOT MODE section above instead.)`
+    : isDuplicate
+    ? `(Skip these examples — Duplicate Konten mode's VO content must be derived from the reference video's actual narration style and the new product's real details, not from these generic templates. See DUPLICATE KONTEN MODE section above.)`
     : `RICH EXAMPLES BY PURPOSE AND LANGUAGE:
 
 Indonesia Hook examples (pick energy that matches the angle):
@@ -1535,12 +1613,12 @@ Indonesia Hook examples (pick energy that matches the angle):
 - "Tau nggak, udah lama banget gue nyari yang kayak gini dan akhirnya nemu juga"
 - "Gue nggak bakal review kalau nggak beneran suka — dan ini salah satunya"
 
-Indonesia Solution/Demo examples (product entering as the answer):
+Indonesia Demo examples:
 - "Coba lihat deh, pas gue aplikasikan langsung nyerap, nggak ada residu sama sekali"
 - "Teksturnya ringan banget, nggak lengket, dan baunya... enak banget sumpah"
 - "Yang gue suka, hasilnya kelihatan langsung — nggak perlu nunggu berminggu-minggu"
 
-Indonesia Benefit/Proof examples:
+Indonesia Benefit examples:
 - "Setelah pakai ini rutin, yang paling kerasa tuh... rasanya beda banget dari sebelumnya"
 - "Jujur ini yang bikin gue balik lagi beli, karena hasilnya konsisten dan beneran kerasa"
 
@@ -1554,12 +1632,12 @@ English Hook examples:
 - "This is the kind of find that makes you want to tell everyone immediately"
 - "So I randomly tried this and... I genuinely can't stop thinking about it"
 
-English Solution/Demo examples (product entering as the answer):
+English Demo examples:
 - "Look at how it just... melts right in. No residue, no heaviness, nothing"
 - "The texture is so lightweight and the scent? Actually amazing"
 - "You can literally see the difference as it works — that's the part that got me"
 
-English Benefit/Proof examples:
+English Benefit examples:
 - "After using this consistently the change is honestly noticeable — and I'm picky"
 - "This is why I keep coming back to it. It's just consistently good"
 
@@ -1584,13 +1662,13 @@ Singapore/Philippines English Hook examples:
 - Turning Point → UPPER end. The transformation moment — describe the product's empowering effect vividly.
 - Victory → mid. Warm, relieved, triumphant resolution.
 - Product Hero Shot + CTA → mid. Story closing merged with the active CTA style's urgency (see CTA MERGE RULE above).`
+    : isDuplicate
+    ? `- For each cloned scene, keep VO word count proportional to what a natural narration would need for that shot's actual duration/content — do not force every scene into a "hook/benefit/CTA" word-count pattern. Match the reference's apparent narration density and pacing per shot; if the reference relies mostly on visuals with minimal/no talking in a shot, keep that scene's VO short/sparse.`
     : `- Hook → LOWER end. Short, punchy, stops scroll. VO competes with overlay — keep it tight.
-- Problem → low-to-mid. State the pain clearly and specifically, no fluff.
-- Agitate → mid-to-upper. Let the frustration land emotionally — enough words to make it felt, not just stated.
-- Solution → mid-to-upper. Introduce the product as the direct answer — connect it back to the exact problem just named.
-- Benefit/Proof → UPPER end. Emotional payoff. Make them feel the transformation, with a concrete detail as proof.
-- Social Proof/Testimonial → mid. Genuine, unscripted reaction. Like texting a friend about a find.
-- Urgency/Offer → mid. Real reason to act now, tied to the active CTA style's framing.
+- Reveal → low-to-mid. Let the visual breathe. One punchy line of awe or curiosity.
+- Demo → UPPER end. Describe exactly what's happening visually — texture, sensation, result.
+- Benefit → UPPER end. Emotional payoff. Make them feel the transformation.
+- Social Proof → mid. Genuine, unscripted reaction. Like texting a friend about a find.
 - CTA → mid. Soft, natural. Never salesy. Platform action woven in casually.`;
 
   const sys=`You are OMNI FLASH AFFILIATE ENGINE v4.0 – CINEMATIC AI STUDIO EDITION.
@@ -1635,6 +1713,7 @@ ${eduBlock}
 ${herbalBlock}
 ${factoryCrisisBlock}
 ${anomalyBlock}
+${duplicateBlock}
 ${styleVariantBlock}
 
 =========================================================
@@ -1671,15 +1750,7 @@ CONSISTENCY MANDATE ACROSS ALL SCENES:
 - If the product image shows any wear, imperfection, or specific real-world detail, it's fine to smooth minor lighting but NEVER change the core identity (color/shape/branding) of the product
 - When writing each scene's visual_prompt.subject, explicitly restate the key visual identifiers (e.g. "the matte forest green bottle with rose-gold cap, exactly as shown, ...") so downstream image/video generators stay anchored to the real product across every single clip
 
-${selectedBuyingMotive?`=========================================================
-BUYING MOTIVE — PSYCHOLOGICAL ANCHOR FOR THIS VIDEO (USER-SELECTED)
 =========================================================
-The person creating this video has analyzed the product and specifically chosen this as the core psychological reason people buy it:
-"${selectedBuyingMotive}"
-
-This motive MUST anchor the Hook and Problem/Agitate scenes — the pain point, the framing, the emotional entry point should all trace back to this exact motive, not a generic assumption. Do not ignore this or substitute a different angle for the emotional core of the video; the marketing angle below determines HOW you frame the story, but this motive determines WHAT emotional truth the story is built on.
-
-`:''}=========================================================
 MARKETING ANGLE — pick ONE, never repeat
 =========================================================
 Rotate from: Problem, Mistake, Curiosity, Hidden Benefit, Life Hack, Comparison, Pattern Interrupt, POV, Story, Discovery, Expectation vs Reality, Before After, Emotional, Secret, Question, Shocking Fact, Common Habit, Daily Routine, Smart Trick, Myth, Expert Tip, One Thing Nobody Tells You, Invisible Problem, Unexpected Use
@@ -1919,6 +1990,68 @@ Each scene object — STANDALONE, complete, copy-pasteable to video generator:
   "negative_prompt": "static shots, talking head to camera, cinematic lens flare, overexposed, dark footage, blurry motion, slow motion beauty shot, repetitive VO phrases, duplicate words, filler word repetition, unnatural stiff movement, robotic motion, jarring cuts, jump cuts without transition, overcrowded text overlay, unreadable text, color grading artifacts, fake CGI, stock footage look, overly staged, commercial look, advertisement feel, different product than reference, mismatched packaging color, altered label design, wrong bottle/container shape, generic product substitute, inconsistent product appearance between scenes"
 }`;
   return sys;
+}
+
+async function generateDuplicate(){
+  if(!b64store.dupref){alert('Upload video referensi dulu!');return;}
+  if(!b64store.dupp){alert('Upload foto produk kamu dulu!');return;}
+  const name=document.getElementById('dupp-name').value.trim();
+  const desc=document.getElementById('dupp-desc').value.trim();
+  const talent=document.getElementById('dupt-text').value.trim();
+  const country=document.getElementById('dup-country').value;
+  const social=document.getElementById('dup-platform').value;
+  const ctaStyleKey=document.getElementById('dup-cta-style')?.value||'standard';
+  const followStructure=document.getElementById('dup-follow-structure')?.checked!==false;
+  if(!name){alert('Nama produk wajib diisi (isi manual atau pakai Analisis Produk dengan AI)!');return;}
+
+  const btn=document.getElementById('dup-btn');
+  btn.disabled=true; btn.textContent='Menganalisis video referensi...';
+
+  // Scene count: kalau "ikuti struktur asli" aktif, kasih placeholder count (AI akan pakai count
+  // asli dari video referensi sesuai instruksi duplicateBlock). Kalau manual, hitung dari durasi/scene dup.
+  const sc = followStructure ? 6 : Math.max(1,Math.ceil(dupDur/dupScene));
+  const ps = purposes(sc); // placeholder labels — diabaikan AI di mode Duplicate, lihat sceneDnaBlock
+  const lang=LANG[country];
+
+  const sys=buildSystemPrompt(country,social,sc,ps,false,false,ctaStyleKey,false,'overstock',false,'',true,followStructure);
+
+  const parts=[
+    {type:'text',text:'REFERENCE VIDEO TO CLONE THE SHOT STRUCTURE FROM (analyze this first):'},
+    {type:'image',source:{type:'base64',media_type:b64store.dupref.mime,data:b64store.dupref.data}},
+    {type:'image',source:{type:'base64',media_type:b64store.dupp.mime,data:b64store.dupp.data}},
+  ];
+  if(b64store.dupt) parts.push({type:'image',source:{type:'base64',media_type:b64store.dupt.mime,data:b64store.dupt.data}});
+  parts.push({type:'text',text:`Product (NEW — use this, not whatever was in the reference video): ${name}\nDesc: ${desc||'see image'}\n${b64store.dupt?'':'Talent: '+(talent||'auto-generate matching reference role, do not copy a real identity')+'\n'}Country: ${country}\nStyle: Duplicate Konten (clone the attached reference video shot structure)\n${followStructure?'Follow the reference video actual scene/shot count and pacing.':`${sc} scenes @ ${dupScene}s | Purposes (placeholder, derive your own from the video): ${ps.join(', ')}`}\nAngle: derive naturally from the reference video narrative approach\nGenerate complete JSON.`});
+
+  const dout=document.getElementById('dup-out');
+  dout.innerHTML=loadingHTML('Menganalisis struktur shot video referensi...');
+  const timer=startCycle(['Menganalisis angle kamera & gerakan...','Memetakan blocking & pacing...','Menyusun ulang dengan produk baru...','Menulis voice over script...','Finalisasi JSON...']);
+
+  try{
+    const key=getKey();
+    const data=await geminiWithRetry(key,sys,parts);
+    clearInterval(timer);
+    if(data.error){dout.innerHTML=errBox('Gemini API Error: '+data.error.message);btn.disabled=false;btn.textContent='🔁 Duplikasi Struktur Video';return;}
+    let raw=geminiText(data);
+    if(!raw){dout.innerHTML=errBox('Response kosong dari Gemini. Coba lagi — kemungkinan video referensi terlalu besar/kompleks.');btn.disabled=false;btn.textContent='🔁 Duplikasi Struktur Video';return;}
+    let js=extractJSON(raw);
+    let parsed=null;
+    try{parsed=JSON.parse(js);}catch(e){
+      js=repairJSON(js);
+      try{parsed=JSON.parse(js);}catch(e2){}
+    }
+    if(!parsed){dout.innerHTML=errBox('Gagal parse JSON hasil AI. Coba generate ulang.');btn.disabled=false;btn.textContent='🔁 Duplikasi Struktur Video';return;}
+    const actualSc=Array.isArray(parsed.scenes)?parsed.scenes.length:sc;
+    dout.innerHTML='';
+    const wrapper=document.createElement('div');
+    wrapper.style.cssText='display:flex;flex-direction:column;gap:14px;width:100%;';
+    dout.appendChild(wrapper);
+    renderVideo(parsed,js,name,actualSc,wrapper);
+  }catch(err){
+    clearInterval(timer);
+    dout.innerHTML=errBox(err.message||'Gagal generate. Coba lagi.');
+  }
+  btn.disabled=false; btn.textContent='🔁 Duplikasi Struktur Video';
 }
 
 async function generateVideo(angleCount=1){
