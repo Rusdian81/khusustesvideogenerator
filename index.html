@@ -572,6 +572,12 @@ function buildGeminiBody(system, parts, model){
   // Convert parts (Anthropic format) to Gemini format
   const gParts=parts.map(p=>{
     if(p.type==='text') return {text:p.text};
+    if(p.type==='video'){
+      // Gemini default-samples video at 1 FPS — fast actions (a kick, a quick toss, etc.)
+      // can fall between sampled frames and get missed entirely. For Duplicate Konten mode
+      // we need much higher fidelity on motion, so we request a higher custom FPS here.
+      return {inlineData:{mimeType:p.source.media_type,data:p.source.data},videoMetadata:{fps:5}};
+    }
     if(p.type==='image') return {inlineData:{mimeType:p.source.media_type,data:p.source.data}};
     return null;
   }).filter(Boolean);
@@ -1326,34 +1332,41 @@ BANNED IN THIS MODE:
 
   const duplicateBlock=isDuplicate?`
 =========================================================
-DUPLICATE KONTEN MODE — MANDATORY RULES (OVERRIDES DEFAULT CONTENT STYLE DNA)
+⚠️ DUPLICATE KONTEN MODE — THIS IS A LITERAL CLONING TASK, NOT CREATIVE WRITING ⚠️
 =========================================================
-A REFERENCE VIDEO has been attached directly to this request (as inline video data, alongside the product image). Your primary job in this mode is SHOT-STRUCTURE CLONING, not generic ad creation.
+STOP. Read this section fully before doing anything else. This overrides every other creative instinct in this prompt.
 
-STEP 1 — ANALYZE THE REFERENCE VIDEO FIRST (internal reasoning, do not output this analysis):
-Watch the attached reference video carefully and identify:
-- The exact number of distinct shots/scenes (count actual cuts/transitions, not narration beats)
-- For EACH shot: camera angle (eye-level, low, high, overhead), camera movement (static, handheld, dolly, pan, whip, push-in), subject blocking/action (what the person/product physically does), framing (close-up, medium, wide), pacing (how long each shot holds), and environment/setting type
-- Any transition style between shots (hard cut, whip pan, match cut, zoom transition)
-- Overall narrative rhythm — does it build curiosity then reveal, or show-then-explain, or a physical demonstration sequence?
-- Whether there's an on-screen talent, and if so, their general action pattern (not their identity/likeness — never replicate a real person's face/identity, only their ROLE and ACTION in the shot)
+A REFERENCE VIDEO is attached as inline video data (it appears before the product image in the input). You are being asked to WATCH it and TRANSCRIBE its exact shot structure — this is closer to rotoscoping/reverse-engineering than to writing an ad. Do NOT invent a new creative concept. Do NOT default to a generic "hook-reveal-benefit-CTA" ad structure unless that is literally what the reference video does.
 
-STEP 2 — RECREATE THE SAME SHOT STRUCTURE WITH THE NEW PRODUCT:
-- Generate scenes that mirror the reference video's actual shot count, camera language, blocking, and pacing AS CLOSELY AS POSSIBLE — this is a structural clone, not a loose inspiration
-- Replace whatever product appeared in the reference with THIS user's own product (provided as a separate image) — same physical actions/demonstrations, same camera treatment, different product
-- If a talent image or description was provided by the user, feature that talent performing the same role/actions as the reference video's talent. If NO talent was provided, describe a natural talent matching the reference video's general demographic/role (e.g. "young adult, casual home setting") WITHOUT copying any specific real person's identity/likeness — invent a generic natural-looking talent that fits the same role.
-- Environment/setting should match the reference's type of location (e.g. home entryway, bedroom, kitchen) — recreate the SETTING TYPE, not attempt to reproduce the literal reference footage
-- ${dupFollowStructure?`Scene count MUST match the reference video's actual detected shot count as closely as possible — this overrides the requested ${sc}-scene default; use your own count based on what you observed in the video.`:`The user has requested a specific total duration/scene count (${sc} scenes) different from the reference's natural length — intelligently compress or expand the reference's shot structure to fit this count while preserving its camera language and pacing DNA as much as possible.`}
+MANDATORY FIRST STEP — LITERAL SHOT LOG (this MUST appear in your output, see schema addition below):
+Before writing anything else, go through the reference video and, for every distinct shot/cut, write down EXACTLY what physically happens — real, literal, specific physical actions and events. Examples of the level of specificity required:
+- NOT "person interacts with product" → INSTEAD "person kicks a car tire with their right foot while holding the folded product under their left arm"
+- NOT "product is shown" → INSTEAD "hand unfolds the product from flat to standing position in one continuous motion, camera pushes in as the top shelf clicks into place"
+- NOT "person reacts" → INSTEAD "person tilts head, raises eyebrows, taps the shelf twice with one finger"
+If the reference video contains ANY specific physical action — a kick, a throw, a drop, a catch, a spin, a slam, a specific hand gesture, an unusual movement — that action is the MOST IMPORTANT thing to preserve. These specific/unusual actions are exactly what makes a clone recognizable; generic "product demo" framing without them is a FAILED clone.
 
-CRITICAL — WHAT TO CLONE VS WHAT TO CHANGE:
-CLONE (keep identical to reference): camera angles, camera movement type, shot framing/composition, subject blocking/physical action pattern, pacing rhythm, transition style, number of distinct scenes, overall narrative structure/beat order
-CHANGE (must be different from reference): the actual product (use the user's product), the talent's specific identity/face (use provided talent or an invented generic one — never claim to be or resemble a specific real identifiable person from the reference video), text overlay language (use the target country/language rules), VO script content (must reference the NEW product's real details, not the reference product's)
+MANDATORY SECOND STEP — RECREATE WITH THE NEW PRODUCT, ACTION-BY-ACTION:
+For every shot you logged, write the new scene so that the SAME literal physical action happens, performed with/on the user's NEW product instead of whatever was in the reference. If the reference shows someone kicking a car tire, the new scene ALSO shows someone kicking a car tire (or the closest equivalent object logically available), just possibly holding/using the new product instead of the reference product. Do not soften, generalize, or remove specific physical actions because they seem unusual for "an ad" — the entire point of this mode is that it looks unusual/native/exactly like the reference, not like a polished generic commercial.
 
-VOICE OVER: follow the standard native-language/tone rules elsewhere in this prompt, but the VO's factual content must be entirely about the NEW product provided by the user — do not carry over any specific claims/features from whatever product was in the reference video.
+WHAT MUST STAY IDENTICAL TO THE REFERENCE (non-negotiable):
+- Number of distinct shots/scenes (unless dupFollowStructure below says otherwise)
+- Every specific physical action/gesture/movement, in the same order
+- Camera angle and camera movement type per shot (static/handheld/dolly/pan/whip/push-in)
+- Framing distance per shot (close-up/medium/wide) and pacing (how long each shot holds)
+- Environment/setting TYPE (e.g. home entryway, street with a parked car, kitchen)
+- Transition style between shots (hard cut, whip pan, match cut)
+- Overall shot order and narrative rhythm
 
-OVERLAY DESIGN: follow the standard overlay_design schema; badge/headline text should be authored fresh for the new product, not copied from any text that may have appeared in the reference video.
+WHAT MUST CHANGE (must be different from the reference):
+- The product itself → always the user's NEW product (provided as a separate image), rendered consistently
+- Talent identity/face → if a talent image/description was provided, use that talent performing the exact same actions as the reference talent; if none was provided, invent a generic natural-looking talent matching the reference's demographic/role — never claim or imply a specific real person's identity
+- VO script content → must be about the NEW product's real details, not the reference product's
+- Overlay text language → follow the target country/language rules elsewhere in this prompt
+- CTA → use the platform/CTA style selected for this generation, not whatever (if anything) appeared in the reference
 
-CTA: apply normally per the CTA rules elsewhere in this prompt — the reference video's own CTA (if any) is not binding; use the platform/CTA style selected for this generation.
+SCENE COUNT RULE: ${dupFollowStructure?`Use the ACTUAL number of shots you counted in the reference video for your scene count — ignore any other scene-count default mentioned elsewhere in this prompt, your own count from direct observation is authoritative.`:`The user wants ${sc} scenes specifically, different from the reference's natural shot count — intelligently merge or split the reference's actual shots to hit exactly ${sc} scenes while preserving as many of the specific physical actions and the camera language as possible. Prioritize keeping unusual/distinctive actions over keeping filler shots.`}
+
+SELF-CHECK BEFORE YOU FINALIZE: For each scene, ask "did I describe a specific, literal physical action I actually observed, or did I write a generic ad description?" If it's generic, go back and watch that segment of the video again and be more literal.
 `:'';
 
   // ── STYLE VARIANT DNA ──────────────────────────────────────────────
@@ -1673,7 +1686,7 @@ Singapore/Philippines English Hook examples:
 
   const sys=`You are OMNI FLASH AFFILIATE ENGINE v4.0 – CINEMATIC AI STUDIO EDITION.
 Your ONLY output is a production-ready JSON. Never explain. Never suggest. Never add commentary. Never output markdown. Output ONLY valid JSON.
-
+${duplicateBlock}
 =========================================================
 SESSION PARAMETERS
 =========================================================
@@ -1713,7 +1726,6 @@ ${eduBlock}
 ${herbalBlock}
 ${factoryCrisisBlock}
 ${anomalyBlock}
-${duplicateBlock}
 ${styleVariantBlock}
 
 =========================================================
@@ -1971,10 +1983,11 @@ Each scene object — STANDALONE, complete, copy-pasteable to video generator:
 {
   "scene": 1,
   "duration_range": "0-${vScene}s",
-  "purpose": "Hook",
+  "purpose": "Hook",${isDuplicate?`
+  "reference_action_observed": "MANDATORY IN DUPLICATE MODE — describe in literal, specific detail the exact physical action/event you observed in THIS corresponding shot of the reference video (e.g. \\"person kicks car tire with right foot while holding folded product under left arm\\"). This must be a real observation, not a generic description. See DUPLICATE KONTEN MODE section above.",`:''}
   "voice_over_script": "VO line for THIS scene — word count follows the dynamic range + purpose adjustment from VOICE OVER RULES above, NOT a fixed number",
   "camera": { "movement": "", "lens": "", "speed": "" },
-  "visual_prompt": { "environment": "Ultra realistic", "subject": "MUST restate the exact_visual_description details (color/shape/packaging) established in product_analysis — the same physical product, not a generic reinterpretation", "composition": "Commercial Composition", "lighting": "Premium cinematic", "camera_motion": "Dynamic", "depth_of_field": "Realistic", "quality": "Ultra realistic 8K", "aspect_ratio": "9:16" },
+  "visual_prompt": { "environment": "Ultra realistic", "subject": "MUST restate the exact_visual_description details (color/shape/packaging) established in product_analysis — the same physical product, not a generic reinterpretation${isDuplicate?'. In Duplicate Konten mode, this field MUST also literally depict the exact physical action described in the reference_action_observed field for this scene — the action is not optional flavor, it is the core content of the shot':''}", "composition": "Commercial Composition", "lighting": "Premium cinematic", "camera_motion": "Dynamic", "depth_of_field": "Realistic", "quality": "Ultra realistic 8K", "aspect_ratio": "9:16" },
   "motion_prompt": { "camera": "", "subject_motion": "", "background_motion": "", "transition": "" },
   "overlay_design": {
     "badge": { "text": "", "background": "Auto", "text_color": "Auto" },
@@ -2013,11 +2026,22 @@ async function generateDuplicate(){
   const ps = purposes(sc); // placeholder labels — diabaikan AI di mode Duplicate, lihat sceneDnaBlock
   const lang=LANG[country];
 
+  // buildSystemPrompt DAN renderVideo membaca vDur/vScene/vStyle/vPlatforms sebagai GLOBAL
+  // (dipakai bareng tab Video). Override sementara di sini, restore di paling akhir fungsi
+  // ini (lihat restoreVState() di bawah) — dipanggil di SETIAP jalur keluar (sukses/error)
+  // supaya kalau user balik ke tab Video, state-nya nggak kebawa rusak.
+  const _savedVDur=vDur, _savedVScene=vScene, _savedVStyle=vStyle, _savedVPlatforms=vPlatforms;
+  vDur = followStructure ? sc*dupScene : dupDur;
+  vScene = dupScene;
+  vStyle = 'Duplicate Konten';
+  vPlatforms = [dupScene+'s'];
+  function restoreVState(){ vDur=_savedVDur; vScene=_savedVScene; vStyle=_savedVStyle; vPlatforms=_savedVPlatforms; }
+
   const sys=buildSystemPrompt(country,social,sc,ps,false,false,ctaStyleKey,false,'overstock',false,'',true,followStructure);
 
   const parts=[
     {type:'text',text:'REFERENCE VIDEO TO CLONE THE SHOT STRUCTURE FROM (analyze this first):'},
-    {type:'image',source:{type:'base64',media_type:b64store.dupref.mime,data:b64store.dupref.data}},
+    {type:'video',source:{type:'base64',media_type:b64store.dupref.mime,data:b64store.dupref.data}},
     {type:'image',source:{type:'base64',media_type:b64store.dupp.mime,data:b64store.dupp.data}},
   ];
   if(b64store.dupt) parts.push({type:'image',source:{type:'base64',media_type:b64store.dupt.mime,data:b64store.dupt.data}});
@@ -2031,25 +2055,27 @@ async function generateDuplicate(){
     const key=getKey();
     const data=await geminiWithRetry(key,sys,parts);
     clearInterval(timer);
-    if(data.error){dout.innerHTML=errBox('Gemini API Error: '+data.error.message);btn.disabled=false;btn.textContent='🔁 Duplikasi Struktur Video';return;}
+    if(data.error){dout.innerHTML=errBox('Gemini API Error: '+data.error.message);btn.disabled=false;btn.textContent='🔁 Duplikasi Struktur Video';restoreVState();return;}
     let raw=geminiText(data);
-    if(!raw){dout.innerHTML=errBox('Response kosong dari Gemini. Coba lagi — kemungkinan video referensi terlalu besar/kompleks.');btn.disabled=false;btn.textContent='🔁 Duplikasi Struktur Video';return;}
+    if(!raw){dout.innerHTML=errBox('Response kosong dari Gemini. Coba lagi — kemungkinan video referensi terlalu besar/kompleks.');btn.disabled=false;btn.textContent='🔁 Duplikasi Struktur Video';restoreVState();return;}
     let js=extractJSON(raw);
     let parsed=null;
     try{parsed=JSON.parse(js);}catch(e){
       js=repairJSON(js);
       try{parsed=JSON.parse(js);}catch(e2){}
     }
-    if(!parsed){dout.innerHTML=errBox('Gagal parse JSON hasil AI. Coba generate ulang.');btn.disabled=false;btn.textContent='🔁 Duplikasi Struktur Video';return;}
+    if(!parsed){dout.innerHTML=errBox('Gagal parse JSON hasil AI. Coba generate ulang.');btn.disabled=false;btn.textContent='🔁 Duplikasi Struktur Video';restoreVState();return;}
     const actualSc=Array.isArray(parsed.scenes)?parsed.scenes.length:sc;
     dout.innerHTML='';
     const wrapper=document.createElement('div');
     wrapper.style.cssText='display:flex;flex-direction:column;gap:14px;width:100%;';
     dout.appendChild(wrapper);
     renderVideo(parsed,js,name,actualSc,wrapper);
+    restoreVState();
   }catch(err){
     clearInterval(timer);
     dout.innerHTML=errBox(err.message||'Gagal generate. Coba lagi.');
+    restoreVState();
   }
   btn.disabled=false; btn.textContent='🔁 Duplikasi Struktur Video';
 }
