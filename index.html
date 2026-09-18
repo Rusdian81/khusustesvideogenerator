@@ -1690,10 +1690,14 @@ ${duplicateBlock}
 =========================================================
 SESSION PARAMETERS
 =========================================================
-Total video duration: ${vDur}s
+${isDuplicate&&dupFollowStructure?`Total video duration: DO NOT use a fixed number — this MUST equal the reference video's own actual total duration, down to the second. Measure it directly from the attached video.
+Scene duration per clip: DO NOT use a fixed number — each scene's duration MUST match that specific shot's actual length in the reference video (shots are rarely uniform length — a 17s reference video with 4 shots might be 3s + 6s + 4s + 4s, NOT four equal slices).
+Total scenes required: DO NOT use the number below — count the ACTUAL number of distinct cuts/shots in the reference video and use that exact count.
+(A placeholder of ${sc} scenes @ ${vScene}s was pre-filled by the interface before you watched the video — IGNORE these two specific numbers entirely once you have watched the reference video; your own direct observation is the only authority here.)`
+:`Total video duration: ${vDur}s
 Scene duration per clip: ${vScene}s
-Total scenes required: ${sc}
-Scene purposes in order: ${ps.join(' → ')}
+Total scenes required: ${sc}`}
+Scene purposes in order: ${isDuplicate?'DERIVE FROM THE REFERENCE VIDEO — do not use any placeholder list, label each scene descriptively based on what that shot actually shows (see DUPLICATE KONTEN MODE instructions above)':ps.join(' → ')}
 Language: ${lang}
 Content style: ${vStyle}
 Video generator platforms: ${vPlatforms.join(', ')}
@@ -1982,7 +1986,7 @@ OUTPUT STRUCTURE — return EXACTLY this JSON shape
 Each scene object — STANDALONE, complete, copy-pasteable to video generator:
 {
   "scene": 1,
-  "duration_range": "0-${vScene}s",
+  "duration_range": "${isDuplicate?'e.g. \\"2.1-5.4s\\" — the ACTUAL start-end timestamp of this exact shot as it appears in the reference video, measured directly from watching it. Every scene\\u2019s duration_range across the whole JSON must sum to the reference video\\u2019s real total length, not a round number.':'0-'+vScene+'s'}",
   "purpose": "Hook",${isDuplicate?`
   "reference_action_observed": "MANDATORY IN DUPLICATE MODE — describe in literal, specific detail the exact physical action/event you observed in THIS corresponding shot of the reference video (e.g. \\"person kicks car tire with right foot while holding folded product under left arm\\"). This must be a real observation, not a generic description. See DUPLICATE KONTEN MODE section above.",`:''}
   "voice_over_script": "VO line for THIS scene — word count follows the dynamic range + purpose adjustment from VOICE OVER RULES above, NOT a fixed number",
